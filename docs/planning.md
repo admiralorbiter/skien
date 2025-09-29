@@ -41,11 +41,11 @@ This document tracks high-level development tasks and milestones for the SKIEN N
 ## Milestone 2: Topic/Thread Management
 **Goal**: Enable organization of data into topics and threads
 
-### 2.1 Topic Management
-- [ ] Topic CRUD operations
-- [ ] Topic assignment to events/stories
-- [ ] Topic color coding and metadata
-- [ ] Topic hierarchy (if needed)
+### 2.1 Topic Management ✅ COMPLETED
+- [x] Topic CRUD operations
+- [x] Topic assignment to events/stories
+- [x] Topic color coding and metadata
+- [x] Topic hierarchy (if needed)
 
 ### 2.2 Thread Management
 - [ ] Thread CRUD operations within topics

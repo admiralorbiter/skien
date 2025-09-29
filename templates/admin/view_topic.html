@@ -1,0 +1,372 @@
+{% extends "base.html" %}
+
+{% block title %}View Topic - Admin - SKIEN{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<style>
+    .topic-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .topic-color-display {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 15px;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .thread-card {
+        transition: all 0.3s ease;
+        border: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .thread-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .event-item {
+        border-left: 3px solid #e9ecef;
+        padding-left: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .event-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .stats-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: none;
+        border-radius: 0.5rem;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="sidebar">
+            <div class="p-3">
+                <h6 class="text-muted text-uppercase fw-bold mb-3">Admin Panel</h6>
+                <nav class="nav flex-column">
+                    <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                    <a class="nav-link" href="{{ url_for('admin_users') }}">
+                        <i class="fas fa-users me-2"></i>Users
+                    </a>
+                    <a class="nav-link" href="{{ url_for('admin_stories') }}">
+                        <i class="fas fa-newspaper me-2"></i>Stories
+                    </a>
+                    <a class="nav-link active" href="{{ url_for('admin_topics') }}">
+                        <i class="fas fa-tags me-2"></i>Topics
+                    </a>
+                    <a class="nav-link" href="{{ url_for('admin_events') }}">
+                        <i class="fas fa-calendar-alt me-2"></i>Events
+                    </a>
+                    <a class="nav-link" href="{{ url_for('admin_logs') }}">
+                        <i class="fas fa-file-alt me-2"></i>System Logs
+                    </a>
+                    <a class="nav-link" href="{{ url_for('admin_metrics') }}">
+                        <i class="fas fa-chart-bar me-2"></i>Metrics
+                    </a>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <!-- Topic Header -->
+        <div class="topic-header">
+            <div class="d-flex align-items-center mb-3">
+                {% if topic.color %}
+                <div class="topic-color-display" style="background-color: {{ topic.color }};"></div>
+                {% else %}
+                <div class="topic-color-display" style="background-color: #6c757d;"></div>
+                {% endif %}
+                <div>
+                    <h1 class="mb-1">{{ topic.name }}</h1>
+                    {% if topic.description %}
+                    <p class="mb-0 opacity-75">{{ topic.description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <small class="opacity-75">
+                        Created {{ topic.created_at.strftime('%B %d, %Y') if topic.created_at is not string else topic.created_at[:10] }}
+                        {% if topic.updated_at != topic.created_at %}
+                        • Updated {{ topic.updated_at.strftime('%B %d, %Y') if topic.updated_at is not string else topic.updated_at[:10] }}
+                        {% endif %}
+                    </small>
+                </div>
+                <div>
+                    <a href="{{ url_for('admin_edit_topic', topic_id=topic.id) }}" class="btn btn-light me-2">
+                        <i class="fas fa-edit me-1"></i>Edit Topic
+                    </a>
+                    <button type="button" class="btn btn-outline-light" onclick="deleteTopic({{ topic.id }}, '{{ topic.name }}')">
+                        <i class="fas fa-trash me-1"></i>Delete Topic
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stats-card text-center">
+                    <div class="card-body">
+                        <h3 class="text-primary mb-1">{{ threads|length }}</h3>
+                        <p class="mb-0 text-muted">Threads</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card text-center">
+                    <div class="card-body">
+                        <h3 class="text-info mb-1">{{ topic.event_count }}</h3>
+                        <p class="mb-0 text-muted">Total Events</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card text-center">
+                    <div class="card-body">
+                        <h3 class="text-warning mb-1">{{ topic.unsorted_event_count }}</h3>
+                        <p class="mb-0 text-muted">Unsorted Events</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card text-center">
+                    <div class="card-body">
+                        <h3 class="text-success mb-1">{{ topic.story_count }}</h3>
+                        <p class="mb-0 text-muted">Stories</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stories Section -->
+        {% if stories %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-newspaper text-primary me-2"></i>
+                    Associated Stories ({{ stories|length }})
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for story in stories %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">{{ story.title[:80] }}{% if story.title|length > 80 %}...{% endif %}</h6>
+                                <p class="card-text text-muted small mb-2">
+                                    <i class="fas fa-globe me-1"></i>{{ story.source_name }}
+                                    {% if story.published_at %}
+                                    • <i class="fas fa-calendar me-1"></i>{{ story.published_at.strftime('%Y-%m-%d') if story.published_at is not string else story.published_at[:10] }}
+                                    {% endif %}
+                                </p>
+                                {% if story.summary %}
+                                <p class="card-text small">{{ story.summary[:150] }}{% if story.summary|length > 150 %}...{% endif %}</p>
+                                {% endif %}
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>{{ story.created_at.strftime('%Y-%m-%d') if story.created_at is not string else story.created_at[:10] }}
+                                    </small>
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('admin_view_story', story_id=story.id) }}" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('admin_edit_story', story_id=story.id) }}" class="btn btn-outline-warning btn-sm">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Navigation -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3>Threads & Events</h3>
+            <div>
+                <a href="{{ url_for('admin_topics') }}" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Topics
+                </a>
+                <a href="#" class="btn btn-success" onclick="alert('Thread creation coming soon!')">
+                    <i class="fas fa-plus me-1"></i>Create Thread
+                </a>
+            </div>
+        </div>
+
+        <!-- Threads -->
+        {% if threads %}
+            <div class="row mb-4">
+                {% for thread in threads %}
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100 thread-card">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ thread.name }}</h5>
+                            {% if thread.description %}
+                            <p class="card-text text-muted small">{{ thread.description[:100] }}{% if thread.description|length > 100 %}...{% endif %}</p>
+                            {% endif %}
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    {% if thread.first_event_date %}
+                                        {{ thread.first_event_date }} - {{ thread.last_event_date or 'Ongoing' }}
+                                    {% else %}
+                                        No events yet
+                                    {% endif %}
+                                </small>
+                                <span class="badge bg-primary">{{ thread.event_count }} Events</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    Created {{ thread.created_at.strftime('%Y-%m-%d') if thread.created_at is not string else thread.created_at[:10] }}
+                                </small>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-outline-primary btn-sm" onclick="alert('Thread view coming soon!')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-warning btn-sm" onclick="alert('Thread edit coming soon!')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Unsorted Events -->
+        {% if unsorted_events %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                        Unsorted Events ({{ unsorted_events|length }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for event in unsorted_events %}
+                    <div class="event-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ event.claim_text[:100] }}{% if event.claim_text|length > 100 %}...{% endif %}</h6>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>{{ event.event_date.strftime('%Y-%m-%d') if event.event_date is not string else event.event_date[:10] }}
+                                    {% if event.importance %}
+                                    • <i class="fas fa-star me-1"></i>Importance: {{ event.importance }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-outline-primary btn-sm" onclick="alert('Event view coming soon!')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-outline-success btn-sm" onclick="alert('Assign to thread coming soon!')">
+                                    <i class="fas fa-link"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% elif not threads and not stories %}
+            <div class="empty-state">
+                <i class="fas fa-sitemap"></i>
+                <h4>No Stories, Threads or Events</h4>
+                <p>This topic doesn't have any associated stories, threads or events yet. Start by assigning stories to this topic or create a thread to organize events.</p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <a href="{{ url_for('admin_stories') }}" class="btn btn-primary">
+                        <i class="fas fa-newspaper me-2"></i>Assign Stories
+                    </a>
+                    <button class="btn btn-success" onclick="alert('Thread creation coming soon!')">
+                        <i class="fas fa-plus me-2"></i>Create First Thread
+                    </button>
+                </div>
+            </div>
+        {% elif not threads %}
+            <div class="empty-state">
+                <i class="fas fa-sitemap"></i>
+                <h4>No Threads or Events</h4>
+                <p>This topic has stories but no threads or events yet. Create a thread to start organizing events.</p>
+                <button class="btn btn-success" onclick="alert('Thread creation coming soon!')">
+                    <i class="fas fa-plus me-2"></i>Create First Thread
+                </button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the topic <strong id="topicName"></strong>?</p>
+                <p class="text-danger"><strong>Warning:</strong> This will also delete all associated threads and events. This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Delete Topic</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function deleteTopic(topicId, topicName) {
+    document.getElementById('topicName').textContent = topicName;
+    document.getElementById('deleteForm').action = "{{ url_for('admin_delete_topic', topic_id=0) }}".replace('0', topicId);
+    
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

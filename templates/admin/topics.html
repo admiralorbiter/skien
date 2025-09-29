@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}Topics Management - Admin - SKIEN{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<style>
+    .topic-card {
+        transition: all 0.3s ease;
+        border: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .topic-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .topic-color-indicator {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 10px;
+        border: 2px solid #fff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+    
+    .topic-stats {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .topic-stats .badge {
+        font-size: 0.75rem;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="sidebar">
+            <div class="p-3">
+                <h6 class="text-muted text-uppercase fw-bold mb-3">Admin Panel</h6>
+                <nav class="nav flex-column">
+                    <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                    <a class="nav-link" href="{{ url_for('admin_users') }}">
+                        <i class="fas fa-users me-2"></i>Users
+                    </a>
+                    <a class="nav-link" href="{{ url_for('admin_stories') }}">
+                        <i class="fas fa-newspaper me-2"></i>Stories
+                    </a>
+                    <a class="nav-link active" href="{{ url_for('admin_topics') }}">
+                        <i class="fas fa-tags me-2"></i>Topics
+                    </a>
+                    <a class="nav-link" href="{{ url_for('admin_events') }}">
+                        <i class="fas fa-calendar-alt me-2"></i>Events
+                    </a>
+                    <a class="nav-link" href="{{ url_for('admin_logs') }}">
+                        <i class="fas fa-file-alt me-2"></i>System Logs
+                    </a>
+                    <a class="nav-link" href="{{ url_for('admin_metrics') }}">
+                        <i class="fas fa-chart-bar me-2"></i>Metrics
+                    </a>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-tags me-2"></i>Topics Management</h2>
+            <div>
+                <a href="{{ url_for('admin_create_topic') }}" class="btn btn-success me-2">
+                    <i class="fas fa-plus me-2"></i>Create Topic
+                </a>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-6">
+                        <label for="search" class="form-label">Search Topics</label>
+                        <input type="text" class="form-control" id="search" name="search" 
+                               value="{{ request.args.get('search', '') }}" placeholder="Search by name or description...">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="sort" class="form-label">Sort By</label>
+                        <select class="form-select" id="sort" name="sort">
+                            <option value="name" {% if request.args.get('sort') == 'name' %}selected{% endif %}>Name</option>
+                            <option value="created_at" {% if request.args.get('sort') == 'created_at' %}selected{% endif %}>Created Date</option>
+                            <option value="thread_count" {% if request.args.get('sort') == 'thread_count' %}selected{% endif %}>Thread Count</option>
+                            <option value="event_count" {% if request.args.get('sort') == 'event_count' %}selected{% endif %}>Event Count</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search me-1"></i>Search
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Topics Grid -->
+        {% if topics %}
+            <div class="row">
+                {% for topic in topics %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 topic-card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                {% if topic.color %}
+                                <div class="topic-color-indicator" style="background-color: {{ topic.color }};"></div>
+                                {% else %}
+                                <div class="topic-color-indicator" style="background-color: #6c757d;"></div>
+                                {% endif %}
+                                <h5 class="card-title mb-0">{{ topic.name }}</h5>
+                            </div>
+                            
+                            {% if topic.description %}
+                            <p class="card-text text-muted small mb-3">{{ topic.description[:100] }}{% if topic.description|length > 100 %}...{% endif %}</p>
+                            {% endif %}
+                            
+                            <div class="topic-stats mb-3">
+                                <span class="badge bg-primary me-2">
+                                    <i class="fas fa-sitemap me-1"></i>{{ topic.thread_count }} Threads
+                                </span>
+                                <span class="badge bg-info me-2">
+                                    <i class="fas fa-calendar-alt me-1"></i>{{ topic.event_count }} Events
+                                </span>
+                                {% if topic.unsorted_event_count > 0 %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>{{ topic.unsorted_event_count }} Unsorted
+                                </span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    Created {{ topic.created_at[:10] if topic.created_at is string else topic.created_at.strftime('%Y-%m-%d') }}
+                                </small>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('admin_view_topic', topic_id=topic.id) }}" 
+                                       class="btn btn-outline-primary btn-sm" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('admin_edit_topic', topic_id=topic.id) }}" 
+                                       class="btn btn-outline-warning btn-sm" title="Edit Topic">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" 
+                                            onclick="deleteTopic({{ topic.id }}, '{{ topic.name }}')" title="Delete Topic">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-tags"></i>
+                <h4>No Topics Found</h4>
+                <p>Get started by creating your first topic to organize your stories and events.</p>
+                <a href="{{ url_for('admin_create_topic') }}" class="btn btn-success">
+                    <i class="fas fa-plus me-2"></i>Create Your First Topic
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the topic <strong id="topicName"></strong>?</p>
+                <p class="text-danger"><strong>Warning:</strong> This will also delete all associated threads and events. This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Delete Topic</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function deleteTopic(topicId, topicName) {
+    document.getElementById('topicName').textContent = topicName;
+    document.getElementById('deleteForm').action = "{{ url_for('admin_delete_topic', topic_id=0) }}".replace('0', topicId);
+    
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+// Auto-submit search form on sort change
+document.getElementById('sort').addEventListener('change', function() {
+    this.form.submit();
+});
+</script>
+{% endblock %}

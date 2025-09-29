@@ -407,9 +407,260 @@ def register_admin_routes(app):
     @login_required
     @admin_required
     def admin_topics():
-        """Admin topics management page - placeholder"""
-        flash('Topics management coming soon!', 'info')
-        return redirect(url_for('admin_dashboard'))
+        """Admin topics management page"""
+        try:
+            from flask_app.models import Topic
+            
+            # Get all topics with statistics
+            topics = Topic.get_all_ordered()
+            topics_with_stats = []
+            
+            for topic in topics:
+                topic_data = topic.to_dict(include_counts=True)
+                # Add the count attributes that templates expect
+                topic_data['thread_count'] = topic.get_thread_count()
+                topic_data['event_count'] = topic.get_event_count()
+                topic_data['unsorted_event_count'] = len(topic.get_unsorted_events())
+                topics_with_stats.append(topic_data)
+            
+            # Log admin action
+            AdminLog.log_action(
+                admin_user_id=current_user.id,
+                action='VIEW_TOPICS',
+                details='Viewed topics management page',
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent')
+            )
+            
+            return render_template('admin/topics.html', topics=topics_with_stats)
+            
+        except Exception as e:
+            current_app.logger.error(f"Error in admin_topics: {str(e)}")
+            flash('An error occurred while loading topics.', 'danger')
+            return redirect(url_for('admin_dashboard'))
+    
+    # Topic CRUD Operations
+    @app.route('/admin/topics/<int:topic_id>')
+    @login_required
+    @admin_required
+    def admin_view_topic(topic_id):
+        """View topic details"""
+        try:
+            from flask_app.models import Topic, Thread, EventClaim
+            
+            topic = Topic.query.get_or_404(topic_id)
+            
+            # Get threads for this topic
+            threads = Thread.find_by_topic(topic_id)
+            threads_with_stats = []
+
+            for thread in threads:
+                thread_data = thread.to_dict(include_counts=True, include_dates=True)
+                # Add the count attributes that templates expect
+                thread_data['event_count'] = thread.get_event_count()
+                threads_with_stats.append(thread_data)
+            
+            # Get unsorted events (events without threads)
+            unsorted_events = topic.get_unsorted_events()
+            
+            # Get stories associated with this topic
+            stories = list(topic.stories)
+            
+            # Add count attributes to topic for template
+            topic.thread_count = topic.get_thread_count()
+            topic.event_count = topic.get_event_count()
+            topic.unsorted_event_count = len(unsorted_events)
+            topic.story_count = len(stories)
+            
+            # Log admin action
+            AdminLog.log_action(
+                admin_user_id=current_user.id,
+                action='VIEW_TOPIC',
+                target_topic_id=topic.id,
+                details=f'Viewed topic: {topic.name}',
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent')
+            )
+            
+            return render_template('admin/view_topic.html',
+                                 topic=topic,
+                                 threads=threads_with_stats,
+                                 unsorted_events=unsorted_events,
+                                 stories=stories)
+            
+        except Exception as e:
+            current_app.logger.error(f"Error viewing topic {topic_id}: {str(e)}")
+            flash('An error occurred while loading the topic.', 'danger')
+            return redirect(url_for('admin_topics'))
+    
+    @app.route('/admin/topics/create', methods=['GET', 'POST'])
+    @login_required
+    @admin_required
+    def admin_create_topic():
+        """Create new topic"""
+        try:
+            from flask_app.models import Topic
+            
+            if request.method == 'POST':
+                # Get form data
+                name = request.form.get('name', '').strip()
+                description = request.form.get('description', '').strip()
+                color = request.form.get('color', '').strip()
+                
+                # Validate required fields
+                if not name:
+                    flash('Topic name is required.', 'danger')
+                    return render_template('admin/create_topic.html')
+                
+                # Check if topic name already exists
+                existing_topic = Topic.find_by_name(name)
+                if existing_topic:
+                    flash('A topic with this name already exists.', 'danger')
+                    return render_template('admin/create_topic.html')
+                
+                # Create topic
+                topic = Topic(
+                    name=name,
+                    description=description if description else None,
+                    color=color if color else None
+                )
+                
+                # Validate topic
+                errors = topic.validate()
+                if errors:
+                    for error in errors:
+                        flash(error, 'danger')
+                    return render_template('admin/create_topic.html')
+                
+                try:
+                    db.session.add(topic)
+                    db.session.commit()
+                    
+                    # Log admin action
+                    AdminLog.log_action(
+                        admin_user_id=current_user.id,
+                        action='CREATE_TOPIC',
+                        target_topic_id=topic.id,
+                        details=f'Created topic: {topic.name}',
+                        ip_address=request.remote_addr,
+                        user_agent=request.headers.get('User-Agent')
+                    )
+                    
+                    flash('Topic created successfully!', 'success')
+                    return redirect(url_for('admin_view_topic', topic_id=topic.id))
+                    
+                except Exception as e:
+                    db.session.rollback()
+                    current_app.logger.error(f"Error creating topic: {str(e)}")
+                    flash('An error occurred while creating the topic.', 'danger')
+            
+            return render_template('admin/create_topic.html')
+            
+        except Exception as e:
+            current_app.logger.error(f"Error in create topic: {str(e)}")
+            flash('An error occurred while loading the create topic page.', 'danger')
+            return redirect(url_for('admin_topics'))
+    
+    @app.route('/admin/topics/<int:topic_id>/edit', methods=['GET', 'POST'])
+    @login_required
+    @admin_required
+    def admin_edit_topic(topic_id):
+        """Edit topic"""
+        try:
+            from flask_app.models import Topic
+            
+            topic = Topic.query.get_or_404(topic_id)
+            
+            if request.method == 'POST':
+                # Get form data
+                name = request.form.get('name', '').strip()
+                description = request.form.get('description', '').strip()
+                color = request.form.get('color', '').strip()
+                
+                # Validate required fields
+                if not name:
+                    flash('Topic name is required.', 'danger')
+                    return render_template('admin/edit_topic.html', topic=topic)
+                
+                # Check if topic name already exists (excluding current topic)
+                existing_topic = Topic.find_by_name(name)
+                if existing_topic and existing_topic.id != topic.id:
+                    flash('A topic with this name already exists.', 'danger')
+                    return render_template('admin/edit_topic.html', topic=topic)
+                
+                # Update topic
+                topic.name = name
+                topic.description = description if description else None
+                topic.color = color if color else None
+                
+                # Validate topic
+                errors = topic.validate()
+                if errors:
+                    for error in errors:
+                        flash(error, 'danger')
+                    return render_template('admin/edit_topic.html', topic=topic)
+                
+                try:
+                    db.session.commit()
+                    
+                    # Log admin action
+                    AdminLog.log_action(
+                        admin_user_id=current_user.id,
+                        action='UPDATE_TOPIC',
+                        target_topic_id=topic.id,
+                        details=f'Updated topic: {topic.name}',
+                        ip_address=request.remote_addr,
+                        user_agent=request.headers.get('User-Agent')
+                    )
+                    
+                    flash('Topic updated successfully!', 'success')
+                    return redirect(url_for('admin_view_topic', topic_id=topic.id))
+                    
+                except Exception as e:
+                    db.session.rollback()
+                    current_app.logger.error(f"Error updating topic {topic_id}: {str(e)}")
+                    flash('An error occurred while updating the topic.', 'danger')
+            
+            return render_template('admin/edit_topic.html', topic=topic)
+            
+        except Exception as e:
+            current_app.logger.error(f"Error editing topic {topic_id}: {str(e)}")
+            flash('An error occurred while loading the topic for editing.', 'danger')
+            return redirect(url_for('admin_topics'))
+    
+    @app.route('/admin/topics/<int:topic_id>/delete', methods=['POST'])
+    @login_required
+    @admin_required
+    def admin_delete_topic(topic_id):
+        """Delete topic"""
+        try:
+            from flask_app.models import Topic
+            
+            topic = Topic.query.get_or_404(topic_id)
+            topic_name = topic.name
+            
+            # Log admin action before deletion
+            AdminLog.log_action(
+                admin_user_id=current_user.id,
+                action='DELETE_TOPIC',
+                target_topic_id=topic.id,
+                details=f'Deleted topic: {topic_name}',
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent')
+            )
+            
+            # Delete topic (cascade will handle related records)
+            db.session.delete(topic)
+            db.session.commit()
+            
+            flash(f'Topic "{topic_name}" deleted successfully!', 'success')
+            return redirect(url_for('admin_topics'))
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error deleting topic {topic_id}: {str(e)}")
+            flash('An error occurred while deleting the topic.', 'danger')
+            return redirect(url_for('admin_topics'))
     
     
     @app.route('/admin/metrics')
@@ -438,6 +689,9 @@ def register_admin_routes(app):
             story_tags = StoryTag.query.filter_by(story_id=story_id).all()
             tags = [st.tag for st in story_tags if st.tag]
             
+            # Get topics
+            topics = story.get_topics()
+            
             # Log admin action
             AdminLog.log_action(
                 admin_user_id=current_user.id,
@@ -448,7 +702,7 @@ def register_admin_routes(app):
                 user_agent=request.headers.get('User-Agent')
             )
             
-            return render_template('admin/view_story.html', story=story, events=events, tags=tags)
+            return render_template('admin/view_story.html', story=story, events=events, tags=tags, topics=topics)
             
         except Exception as e:
             current_app.logger.error(f"Error viewing story {story_id}: {str(e)}")
@@ -461,7 +715,7 @@ def register_admin_routes(app):
     def admin_edit_story(story_id):
         """Edit story"""
         try:
-            from flask_app.models import Story, Tag, StoryTag
+            from flask_app.models import Story, Tag, StoryTag, Topic
             
             story = Story.query.get_or_404(story_id)
             
@@ -474,6 +728,7 @@ def register_admin_routes(app):
                 summary = request.form.get('summary', '').strip()
                 raw_text = request.form.get('raw_text', '').strip()
                 tags_input = request.form.get('tags', '').strip()
+                topic_ids = request.form.getlist('topics')  # Get selected topic IDs
                 
                 # Validate required fields
                 if not title:
@@ -521,6 +776,15 @@ def register_admin_routes(app):
                         story_tag = StoryTag(story_id=story.id, tag_id=tag.id)
                         db.session.add(story_tag)
                 
+                # Handle topics
+                if topic_ids:
+                    # Convert string IDs to integers
+                    topic_ids = [int(tid) for tid in topic_ids if tid.isdigit()]
+                    success, error = story.set_topics(topic_ids)
+                    if not success:
+                        flash(f'Error updating topics: {error}', 'danger')
+                        return render_template('admin/edit_story.html', story=story)
+                
                 try:
                     db.session.commit()
                     
@@ -546,7 +810,19 @@ def register_admin_routes(app):
             story_tags = StoryTag.query.filter_by(story_id=story.id).all()
             current_tags = [st.tag.name for st in story_tags if st.tag]
             
-            return render_template('admin/edit_story.html', story=story, current_tags=current_tags)
+            # Get current topics for display
+            current_topics = story.get_topics()
+            current_topic_ids = [topic.id for topic in current_topics]
+            
+            # Get all available topics
+            all_topics = Topic.get_all_ordered()
+            
+            return render_template('admin/edit_story.html', 
+                                 story=story, 
+                                 current_tags=current_tags,
+                                 current_topics=current_topics,
+                                 current_topic_ids=current_topic_ids,
+                                 all_topics=all_topics)
             
         except Exception as e:
             current_app.logger.error(f"Error editing story {story_id}: {str(e)}")

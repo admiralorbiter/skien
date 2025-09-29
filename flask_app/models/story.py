@@ -28,6 +28,9 @@ class Story(BaseModel):
     event_links = db.relationship('EventStoryLink', backref='story_obj', lazy='dynamic', cascade='all, delete-orphan')
     story_tags = db.relationship('StoryTag', backref='story_obj', lazy='dynamic', cascade='all, delete-orphan')
     
+    # Many-to-many relationship with topics
+    topics = db.relationship('Topic', secondary='story_topics', backref='stories', lazy='dynamic')
+    
     # Indexes
     __table_args__ = (
         Index('idx_story_url', 'url'),
@@ -239,3 +242,72 @@ class Story(BaseModel):
         except Exception as e:
             current_app.logger.error(f"Error finding duplicates for story {story.id}: {str(e)}")
             return []
+    
+    def get_topics(self):
+        """Get all topics associated with this story"""
+        try:
+            return list(self.topics)
+        except Exception as e:
+            current_app.logger.error(f"Error getting topics for story {self.id}: {str(e)}")
+            return []
+    
+    def add_topic(self, topic):
+        """Add a topic to this story"""
+        try:
+            from .story_topic import StoryTopic
+            
+            # Check if relationship already exists
+            existing = StoryTopic.query.filter_by(story_id=self.id, topic_id=topic.id).first()
+            if existing:
+                return True, "Topic already associated with this story"
+            
+            # Create new relationship
+            story_topic = StoryTopic(story_id=self.id, topic_id=topic.id)
+            db.session.add(story_topic)
+            db.session.commit()
+            return True, None
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error adding topic {topic.id} to story {self.id}: {str(e)}")
+            return False, str(e)
+    
+    def remove_topic(self, topic):
+        """Remove a topic from this story"""
+        try:
+            from .story_topic import StoryTopic
+            
+            # Find and delete the relationship
+            story_topic = StoryTopic.query.filter_by(story_id=self.id, topic_id=topic.id).first()
+            if story_topic:
+                db.session.delete(story_topic)
+                db.session.commit()
+                return True, None
+            return True, "Topic not associated with this story"
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error removing topic {topic.id} from story {self.id}: {str(e)}")
+            return False, str(e)
+    
+    def set_topics(self, topic_ids):
+        """Set topics for this story (replaces existing topics)"""
+        try:
+            from .topic import Topic
+            from .story_topic import StoryTopic
+            
+            # Remove existing topic relationships
+            StoryTopic.query.filter_by(story_id=self.id).delete()
+            
+            # Add new topics
+            for topic_id in topic_ids:
+                topic = Topic.query.get(topic_id)
+                if topic:
+                    # Create new story-topic relationship
+                    story_topic = StoryTopic(story_id=self.id, topic_id=topic.id)
+                    db.session.add(story_topic)
+            
+            db.session.commit()
+            return True, None
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error setting topics for story {self.id}: {str(e)}")
+            return False, str(e)

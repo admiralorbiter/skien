@@ -130,6 +130,22 @@
         </div>
         {% endif %}
         
+        <!-- Topics -->
+        {% if topics %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Topics</h5>
+            </div>
+            <div class="card-body">
+                {% for topic in topics %}
+                <span class="badge me-2 mb-2" style="background-color: {{ topic.color or '#6c757d' }}; color: white;">
+                    <i class="fas fa-tag me-1"></i>{{ topic.name }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
         <!-- Related Events -->
         {% if events %}
         <div class="card mb-4">
