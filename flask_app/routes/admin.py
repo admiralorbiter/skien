@@ -94,17 +94,20 @@ def register_admin_routes(app):
     @admin_required
     def admin_create_user():
         """Create new user"""
-        # Create form
+        # Create form - defaults are already set in the form definition
         form = CreateUserForm()
         
-        # For GET requests, set default values after form creation
+        # For GET requests, ensure defaults are properly set
         if request.method == 'GET':
-            form.is_active.default = True
-            form.is_admin.default = False
-            form.process()  # Re-process the form to apply defaults
+            form.is_active.data = True
+            form.is_admin.data = False
         
         try:
             if form.validate_on_submit():
+                # Handle checkbox values explicitly
+                is_active = bool(request.form.get('is_active'))
+                is_admin = bool(request.form.get('is_admin'))
+                
                 # Create new user
                 new_user, error = User.safe_create(
                     username=form.username.data.strip(),
@@ -112,8 +115,8 @@ def register_admin_routes(app):
                     password_hash=generate_password_hash(form.password.data),
                     first_name=form.first_name.data.strip() if form.first_name.data else None,
                     last_name=form.last_name.data.strip() if form.last_name.data else None,
-                    is_active=form.is_active.data,
-                    is_admin=form.is_admin.data
+                    is_active=is_active,
+                    is_admin=is_admin
                 )
                 
                 if error:

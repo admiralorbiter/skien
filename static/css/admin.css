@@ -277,19 +277,35 @@
     margin-left: 0.5rem;
 }
 
-/* Let Bootstrap handle checkbox styling - only customize colors */
-.form-check-input[type="checkbox"] {
-    cursor: pointer;
+/* Custom checkbox styling to override Bootstrap */
+.form-check .form-check-input[type="checkbox"] {
+    cursor: pointer !important;
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    margin-top: 0.125rem !important;
+    vertical-align: top !important;
+    background-color: #fff !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    background-size: contain !important;
+    border: 1px solid rgba(0, 0, 0, 0.25) !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    color-adjust: exact !important;
+    flex-shrink: 0 !important;
 }
 
-.form-check-input[type="checkbox"]:checked {
-    background-color: var(--redwood);
-    border-color: var(--redwood);
+.form-check .form-check-input[type="checkbox"]:checked {
+    background-color: var(--redwood) !important;
+    border-color: var(--redwood) !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e") !important;
 }
 
-.form-check-input[type="checkbox"]:focus {
-    border-color: var(--redwood);
-    box-shadow: 0 0 0 0.25rem rgba(183, 93, 105, 0.25);
+.form-check .form-check-input[type="checkbox"]:focus {
+    border-color: var(--redwood) !important;
+    box-shadow: 0 0 0 0.25rem rgba(183, 93, 105, 0.25) !important;
+    outline: 0 !important;
 }
 
 .form-check-label {
