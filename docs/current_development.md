@@ -3,51 +3,69 @@
 ## Active Sprint: Milestone 1 - Data Plumbing
 **Sprint Goal**: Set up core data infrastructure and basic import functionality
 
-## Current Focus: Database Models & Schema
+## Current Focus: Import System Implementation
 
 ### In Progress
-- [ ] **Create base model classes** (1-2 commits)
-  - [ ] Set up SQLAlchemy base with common fields (id, created_at, updated_at)
-  - [ ] Add utility methods (to_dict, from_dict, validation)
-  - [ ] Create base model tests
+*None currently - ready to start import system*
+
+### Recently Completed
+- [x] **Database Models & Schema** (All core models implemented and tested)
+  - [x] All 8 core models created with proper relationships
+  - [x] Comprehensive validation and utility methods
+  - [x] Basic test suite implemented (some tests need refinement)
+  - [x] SQLAlchemy relationship warnings resolved
+
+- [x] **Database Migration Setup** (Skipped - not needed for SQLite development)
+  - [x] Confirmed SQLite works with `db.create_all()` for development
+  - [x] Migrations not needed until production deployment
+  - [x] Cleaned up development logging output
 
 ### Next Up (Ready to Start)
-- [ ] **Story model implementation** (2-3 commits)
-  - [ ] Create Story model with all required fields
-  - [ ] Add validation for URL uniqueness and date formats
-  - [ ] Create Story model tests
-  - [ ] Add Story model to database migration
-
-- [ ] **Event/Claim model implementation** (2-3 commits)
-  - [ ] Create EventClaim model with foreign keys
-  - [ ] Add validation for date ranges and importance levels
-  - [ ] Create EventClaim model tests
-  - [ ] Add EventClaim model to database migration
-
-- [ ] **Topic and Thread models** (2-3 commits)
-  - [ ] Create Topic model with name uniqueness
-  - [ ] Create Thread model with topic relationship
-  - [ ] Add validation for required fields
-  - [ ] Create Topic and Thread model tests
-  - [ ] Add models to database migration
-
-- [ ] **Edge and Tag models** (2-3 commits)
-  - [ ] Create Edge model with relationship validation
-  - [ ] Create Tag model with name uniqueness
-  - [ ] Create junction table models (EventStoryLink, StoryTag)
-  - [ ] Add validation to prevent self-loops in edges
-  - [ ] Create Edge and Tag model tests
-  - [ ] Add models to database migration
-
-### Blocked/Waiting
-- [ ] **Database migration setup** (1 commit)
-  - [ ] Initialize Alembic for database migrations
-  - [ ] Create initial migration script
-  - [ ] Set up migration commands in Flask CLI
-  - [ ] Test migration up/down functionality
+- [ ] **Import system implementation** (3-4 commits)
+  - [ ] CSV file upload handling
+  - [ ] Column mapping interface
+  - [ ] Data validation and preview
+  - [ ] Batch import processing
+  - [ ] Deduplication logic
 
 ### Completed This Sprint
-*None yet - starting fresh*
+- [x] **Create base model classes** (1-2 commits)
+  - [x] Set up SQLAlchemy base with common fields (id, created_at, updated_at)
+  - [x] Add utility methods (to_dict, from_dict, validation)
+  - [x] Create base model tests
+
+- [x] **Story model implementation** (2-3 commits)
+  - [x] Create Story model with all required fields
+  - [x] Add validation for URL uniqueness and date formats
+  - [x] Create Story model tests
+  - [x] Add URL canonicalization and duplicate detection
+
+- [x] **Event/Claim model implementation** (2-3 commits)
+  - [x] Create EventClaim model with foreign keys
+  - [x] Add validation for date ranges and importance levels
+  - [x] Create EventClaim model tests
+  - [x] Add relationship validation methods
+
+- [x] **Topic and Thread models** (2-3 commits)
+  - [x] Create Topic model with name uniqueness
+  - [x] Create Thread model with topic relationship
+  - [x] Add validation for required fields
+  - [x] Create Topic and Thread model tests
+  - [x] Add search and filtering methods
+
+- [x] **Edge and Tag models** (2-3 commits)
+  - [x] Create Edge model with relationship validation
+  - [x] Create Tag model with name uniqueness
+  - [x] Create junction table models (EventStoryLink, StoryTag)
+  - [x] Add validation to prevent self-loops in edges
+  - [x] Create Edge and Tag model tests
+  - [x] Add comprehensive relationship management
+
+### Blocked/Waiting
+*None currently*
+
+### Completed This Sprint
+*See completed tasks above*
 
 ## Commit Guidelines
 
@@ -100,9 +118,9 @@ type(scope): brief description
 ## Testing Strategy
 
 ### Current Testing Focus
-- [ ] Unit tests for all model classes
-- [ ] Integration tests for database operations
-- [ ] Validation tests for data constraints
+- [x] Unit tests for all model classes (basic tests implemented)
+- [ ] Integration tests for database operations (in progress)
+- [x] Validation tests for data constraints (implemented)
 - [ ] Migration tests for database schema changes
 
 ### Test Coverage Goals

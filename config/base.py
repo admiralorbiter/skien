@@ -18,7 +18,7 @@ class Config:
 class DevelopmentConfig(Config):
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///your_database.db'
-    SQLALCHEMY_ECHO = True  # Enable SQL query logging in development
+    SQLALCHEMY_ECHO = False  # Disable SQL query logging for cleaner output
 
 class TestingConfig(Config):
     TESTING = True
