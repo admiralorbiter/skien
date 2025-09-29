@@ -1,50 +1,48 @@
 # SKIEN Current Development
 
-## Active Sprint: Milestone 1 - Data Plumbing
-**Sprint Goal**: Set up core data infrastructure and basic import functionality
+## Active Sprint: Milestone 2 - Topic & Thread Management
+**Sprint Goal**: Enable organization of data into topics and threads for better content management
 
-## Current Focus: Import System Implementation
+> **Note**: This document focuses on current and future work. All completed work is documented in `past_development.md`.
+
+## Current Focus: Topic and Thread Management System
 
 ### In Progress
-*None currently - ready to start next phase*
+**Next Priority**: Topic Management CRUD Operations
+- Implement topic creation, viewing, editing, and deletion
+- Add topic management interface to admin panel
+- Enable topic assignment to stories and events
+- Add topic color coding and metadata management
+
+### Immediate Next Steps
+1. **Topic CRUD Routes** - Create admin routes for topic management
+2. **Topic Templates** - Build view, edit, create templates for topics
+3. **Topic Assignment** - Add topic assignment to story views
+4. **Topic Filtering** - Add topic-based filtering to story list
 
 ### Recently Completed
-- [x] **Database Models & Schema** (All core models implemented and tested)
-  - [x] All 8 core models created with proper relationships
-  - [x] Comprehensive validation and utility methods
-  - [x] Basic test suite implemented (some tests need refinement)
-  - [x] SQLAlchemy relationship warnings resolved
-
-- [x] **Database Migration Setup** (Skipped - not needed for SQLite development)
-  - [x] Confirmed SQLite works with `db.create_all()` for development
-  - [x] Migrations not needed until production deployment
-  - [x] Cleaned up development logging output
-
-- [x] **Import System Implementation** (Complete CSV import system)
-  - [x] CSV file upload handling with drag & drop interface
-  - [x] Column mapping interface for flexible data mapping
-  - [x] Data validation and preview functionality
-  - [x] Batch import processing with progress tracking
-  - [x] Deduplication logic to prevent duplicate stories
-  - [x] Source extraction from URLs (400+ news sources mapped)
-  - [x] Error handling and detailed import results
-
-- [x] **Story CRUD Operations** (Complete story management system)
-  - [x] Story view interface with detailed information display
-  - [x] Story edit interface with form validation
-  - [x] Story creation interface with auto-fill features
-  - [x] Story deletion with confirmation modal
-  - [x] Tag management integration for stories
-  - [x] Admin logging for all story operations
-  - [x] Responsive design with Bootstrap components
+*All completed work has been moved to past_development.md*
 
 ### Next Up (Ready to Start)
-- [ ] **Topic and Thread Management** (2-3 commits)
-  - [ ] Topic creation and editing interface
-  - [ ] Thread management within topics
-  - [ ] Topic/thread assignment for stories
-  - [ ] Topic/thread filtering and search
+- [ ] **Topic Management System** (2-3 commits)
+  - [ ] Topic CRUD operations (create, view, edit, delete)
+  - [ ] Topic management interface in admin panel
+  - [ ] Topic color coding and metadata
+  - [ ] Topic assignment to stories and events
 
+- [ ] **Thread Management System** (2-3 commits)
+  - [ ] Thread CRUD operations within topics
+  - [ ] Thread management interface
+  - [ ] Thread assignment to events
+  - [ ] Thread ordering and chronology
+
+- [ ] **Assignment Interface** (1-2 commits)
+  - [ ] Bulk assignment tools for stories/events
+  - [ ] Topic/thread assignment from story views
+  - [ ] Assignment validation and constraints
+  - [ ] Quick assignment from detail views
+
+### Future Phases (After Topic/Thread Management)
 - [ ] **Event Creation and Linking** (2-3 commits)
   - [ ] Event creation interface
   - [ ] Event-story linking system
@@ -57,44 +55,8 @@
   - [ ] Tag filtering and search
   - [ ] Tag statistics and analytics
 
-### Completed This Sprint
-- [x] **Create base model classes** (1-2 commits)
-  - [x] Set up SQLAlchemy base with common fields (id, created_at, updated_at)
-  - [x] Add utility methods (to_dict, from_dict, validation)
-  - [x] Create base model tests
-
-- [x] **Story model implementation** (2-3 commits)
-  - [x] Create Story model with all required fields
-  - [x] Add validation for URL uniqueness and date formats
-  - [x] Create Story model tests
-  - [x] Add URL canonicalization and duplicate detection
-
-- [x] **Event/Claim model implementation** (2-3 commits)
-  - [x] Create EventClaim model with foreign keys
-  - [x] Add validation for date ranges and importance levels
-  - [x] Create EventClaim model tests
-  - [x] Add relationship validation methods
-
-- [x] **Topic and Thread models** (2-3 commits)
-  - [x] Create Topic model with name uniqueness
-  - [x] Create Thread model with topic relationship
-  - [x] Add validation for required fields
-  - [x] Create Topic and Thread model tests
-  - [x] Add search and filtering methods
-
-- [x] **Edge and Tag models** (2-3 commits)
-  - [x] Create Edge model with relationship validation
-  - [x] Create Tag model with name uniqueness
-  - [x] Create junction table models (EventStoryLink, StoryTag)
-  - [x] Add validation to prevent self-loops in edges
-  - [x] Create Edge and Tag model tests
-  - [x] Add comprehensive relationship management
-
 ### Blocked/Waiting
 *None currently*
-
-### Completed This Sprint
-*See completed tasks above*
 
 ## Commit Guidelines
 
@@ -137,6 +99,10 @@ type(scope): brief description
 - [ ] Implement proper logging throughout the application
 - [ ] Add input validation and sanitization
 - [ ] Create database connection pooling for production
+- [ ] Fix SQLAlchemy relationship warnings (overlaps parameters)
+- [ ] Add CSRF protection to forms
+- [ ] Implement proper error pages (404, 500)
+- [ ] Add database migration system for production
 
 ### Performance Considerations
 - [ ] Add database indexes for frequently queried fields
@@ -189,18 +155,18 @@ type(scope): brief description
 
 ## Daily Standup Notes
 
-### Today's Focus
-- Setting up base model classes
-- Planning database schema structure
-- Creating initial test framework
+### Current Focus
+- Topic and Thread Management System implementation
+- Topic CRUD operations development
+- Admin interface enhancements
 
 ### Blockers
 - None currently
 
-### Completed Yesterday
-- N/A - starting fresh
+### Recent Accomplishments
+*See past_development.md for completed work*
 
-### Tomorrow's Plan
-- Complete base model classes
-- Start Story model implementation
-- Set up database migration system
+### Next Steps
+- Implement Topic Management CRUD operations
+- Add topic assignment to stories
+- Create thread management system

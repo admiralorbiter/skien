@@ -3,40 +3,40 @@
 ## Overview
 This document tracks high-level development tasks and milestones for the SKIEN News Threads Tracker project, based on the product specification v0.
 
-## Milestone 1: Data Plumbing
+## Milestone 1: Data Plumbing ✅ COMPLETED
 **Goal**: Set up core data infrastructure and basic import functionality
 
-### 1.1 Database Models & Schema
-- [ ] Create SQLAlchemy models for all entities
-  - [ ] Story model (id, url, title, source_name, author, published_at, captured_at, summary, raw_text)
-  - [ ] Event/Claim model (id, topic_id, thread_id, story_primary_id, claim_text, event_date, importance)
-  - [ ] Topic model (id, name, description, color)
-  - [ ] Thread model (id, topic_id, name, description, start_date)
-  - [ ] Edge model (id, src_event_id, dst_event_id, relation)
-  - [ ] Tag model (id, name)
-  - [ ] Junction tables (event_story_link, story_tag)
-- [ ] Set up database migrations with Alembic
-- [ ] Create database indexes for performance
-- [ ] Add model relationships and constraints
+### 1.1 Database Models & Schema ✅ COMPLETED
+- [x] Create SQLAlchemy models for all entities
+  - [x] Story model (id, url, title, source_name, author, published_at, captured_at, summary, raw_text)
+  - [x] Event/Claim model (id, topic_id, thread_id, story_primary_id, claim_text, event_date, importance)
+  - [x] Topic model (id, name, description, color)
+  - [x] Thread model (id, topic_id, name, description, start_date)
+  - [x] Edge model (id, src_event_id, dst_event_id, relation)
+  - [x] Tag model (id, name)
+  - [x] Junction tables (event_story_link, story_tag)
+- [x] Set up database migrations with Alembic (SQLite development mode)
+- [x] Create database indexes for performance
+- [x] Add model relationships and constraints
 
-### 1.2 Data Import System
-- [ ] CSV import functionality
-  - [ ] File upload handling
-  - [ ] Column mapping interface
-  - [ ] Data validation and preview
-  - [ ] Batch import processing
-- [ ] Deduplication system
-  - [ ] URL-based exact matching
-  - [ ] Title similarity detection (Jaro-Winkler)
-  - [ ] Source + date proximity matching
-  - [ ] Manual review interface for potential duplicates
+### 1.2 Data Import System ✅ COMPLETED
+- [x] CSV import functionality
+  - [x] File upload handling
+  - [x] Column mapping interface
+  - [x] Data validation and preview
+  - [x] Batch import processing
+- [x] Deduplication system
+  - [x] URL-based exact matching
+  - [x] Title similarity detection (Jaro-Winkler)
+  - [x] Source + date proximity matching
+  - [x] Manual review interface for potential duplicates
 
-### 1.3 Basic Table View
-- [ ] DataTable implementation for stories/events
-- [ ] Inline editing capabilities
-- [ ] Bulk operations (assign topics/threads, delete, tag)
-- [ ] Filtering and sorting
-- [ ] Pagination for large datasets
+### 1.3 Basic Table View ✅ COMPLETED
+- [x] DataTable implementation for stories/events
+- [x] Inline editing capabilities (Story CRUD)
+- [x] Bulk operations (assign topics/threads, delete, tag)
+- [x] Filtering and sorting
+- [x] Pagination for large datasets
 
 ## Milestone 2: Topic/Thread Management
 **Goal**: Enable organization of data into topics and threads
