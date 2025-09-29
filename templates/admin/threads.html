@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Threads - {{ topic.name }} - Admin - SKIEN{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<style>
+    .topic-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .topic-color-display {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 10px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .thread-card {
+        transition: all 0.3s ease;
+        border: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1rem;
+    }
+    
+    .thread-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .thread-date {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    
+    .thread-stats {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+    
+    .stat-badge {
+        background: #e9ecef;
+        color: #495057;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="topic-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <div class="d-flex align-items-center mb-2">
+                    <div class="topic-color-display" style="background-color: {{ topic.color or '#6c757d' }};"></div>
+                    <h1 class="h3 mb-0">Threads in {{ topic.name }}</h1>
+                </div>
+                {% if topic.description %}
+                <p class="mb-0 opacity-75">{{ topic.description }}</p>
+                {% endif %}
+                <small class="opacity-75">
+                    Created {{ topic.created_at.strftime('%B %d, %Y') if topic.created_at is not string else topic.created_at[:10] }}
+                </small>
+            </div>
+            <div>
+                <a href="{{ url_for('admin_create_thread', topic_id=topic.id) }}" class="btn btn-light me-2">
+                    <i class="fas fa-plus me-1"></i>Create Thread
+                </a>
+                <a href="{{ url_for('admin_view_topic', topic_id=topic.id) }}" class="btn btn-outline-light">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Topic
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-6">
+                    <label for="search" class="form-label">Search Threads</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           placeholder="Search by name or description..." 
+                           value="{{ request.args.get('search', '') }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="sort" class="form-label">Sort By</label>
+                    <select class="form-select" id="sort" name="sort">
+                        <option value="name" {% if request.args.get('sort') == 'name' %}selected{% endif %}>Name</option>
+                        <option value="start_date" {% if request.args.get('sort') == 'start_date' %}selected{% endif %}>Start Date</option>
+                        <option value="created_at" {% if request.args.get('sort') == 'created_at' %}selected{% endif %}>Created Date</option>
+                        <option value="event_count" {% if request.args.get('sort') == 'event_count' %}selected{% endif %}>Event Count</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search me-1"></i>Search
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Threads List -->
+    {% if threads %}
+    <div class="row">
+        {% for thread in threads %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card thread-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title mb-0">{{ thread.name }}</h5>
+                        <div class="btn-group" role="group">
+                            <a href="{{ url_for('admin_view_thread', thread_id=thread.id) }}" 
+                               class="btn btn-outline-primary btn-sm" title="View Thread">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ url_for('admin_edit_thread', thread_id=thread.id) }}" 
+                               class="btn btn-outline-warning btn-sm" title="Edit Thread">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button type="button" class="btn btn-outline-danger btn-sm" 
+                                    onclick="deleteThread({{ thread.id }}, '{{ thread.name }}')" 
+                                    title="Delete Thread">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    {% if thread.description %}
+                    <p class="card-text text-muted small mb-2">{{ thread.description[:100] }}{% if thread.description|length > 100 %}...{% endif %}</p>
+                    {% endif %}
+                    
+                    <div class="thread-stats mb-2">
+                        <span class="stat-badge">
+                            <i class="fas fa-calendar me-1"></i>{{ thread.event_count }} Events
+                        </span>
+                        {% if thread.start_date %}
+                        <span class="stat-badge">
+                            <i class="fas fa-clock me-1"></i>{{ thread.start_date.strftime('%Y-%m-%d') if thread.start_date is not string else thread.start_date[:10] }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="thread-date">
+                        <small class="text-muted">
+                            <i class="fas fa-plus-circle me-1"></i>Created {{ thread.created_at.strftime('%Y-%m-%d') if thread.created_at is not string else thread.created_at[:10] }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="card">
+        <div class="card-body empty-state">
+            <i class="fas fa-list"></i>
+            <h4>No Threads Yet</h4>
+            <p class="mb-3">This topic doesn't have any threads yet. Create your first thread to start organizing events chronologically.</p>
+            <a href="{{ url_for('admin_create_thread', topic_id=topic.id) }}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Create First Thread
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the thread "<span id="threadName"></span>"?</p>
+                <p class="text-danger small">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Delete Thread</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function deleteThread(threadId, threadName) {
+    document.getElementById('threadName').textContent = threadName;
+    document.getElementById('deleteForm').action = '{{ url_for("admin_delete_thread", thread_id=0) }}'.replace('0', threadId);
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}

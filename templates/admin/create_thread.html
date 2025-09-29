@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Create Thread - {{ topic.name }} - Admin - SKIEN{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<style>
+    .topic-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .topic-color-display {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 10px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .form-card {
+        border: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 1rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        transform: translateY(-1px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="topic-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <div class="d-flex align-items-center mb-2">
+                    <div class="topic-color-display" style="background-color: {{ topic.color or '#6c757d' }};"></div>
+                    <h1 class="h3 mb-0">Create New Thread</h1>
+                </div>
+                <p class="mb-0 opacity-75">Add a new thread to organize events chronologically in {{ topic.name }}</p>
+            </div>
+            <div>
+                <a href="{{ url_for('admin_threads', topic_id=topic.id) }}" class="btn btn-outline-light">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Threads
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Thread Form -->
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card form-card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-plus-circle me-2"></i>Thread Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Thread Name *</label>
+                                    <input type="text" class="form-control" id="name" name="name" 
+                                           placeholder="Enter thread name..." required
+                                           value="{{ request.form.get('name', '') }}">
+                                    <div class="form-text">A descriptive name for this thread (e.g., "Election Campaign", "Product Launch")</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="start_date" class="form-label">Start Date</label>
+                                    <input type="date" class="form-control" id="start_date" name="start_date"
+                                           value="{{ request.form.get('start_date', '') }}">
+                                    <div class="form-text">Optional: When this thread begins</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="4"
+                                      placeholder="Describe what this thread is about...">{{ request.form.get('description', '') }}</textarea>
+                            <div class="form-text">Optional: Provide context about this thread's purpose and scope</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Thread Purpose:</strong> Threads help organize events chronologically within a topic. 
+                                You can add events to this thread later to create a timeline of related occurrences.
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('admin_threads', topic_id=topic.id) }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Create Thread
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-focus on name field
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('name').focus();
+});
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const name = document.getElementById('name').value.trim();
+    if (!name) {
+        e.preventDefault();
+        alert('Thread name is required.');
+        document.getElementById('name').focus();
+        return false;
+    }
+    
+    if (name.length > 200) {
+        e.preventDefault();
+        alert('Thread name is too long (maximum 200 characters).');
+        document.getElementById('name').focus();
+        return false;
+    }
+});
+</script>
+{% endblock %}

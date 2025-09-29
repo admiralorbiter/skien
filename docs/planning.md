@@ -47,11 +47,11 @@ This document tracks high-level development tasks and milestones for the SKIEN N
 - [x] Topic color coding and metadata
 - [x] Topic hierarchy (if needed)
 
-### 2.2 Thread Management
-- [ ] Thread CRUD operations within topics
-- [ ] Thread assignment to events
-- [ ] Thread ordering and chronology
-- [ ] Thread branching support
+### 2.2 Thread Management ✅ COMPLETED
+- [x] Thread CRUD operations within topics
+- [x] Thread assignment to stories
+- [x] Thread ordering and chronology
+- [x] Thread statistics and metrics
 
 ### 2.3 Assignment Interface
 - [ ] Bulk assignment tools

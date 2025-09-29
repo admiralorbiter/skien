@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}{{ thread.name }} - Thread - Admin - SKIEN{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<style>
+    .thread-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .thread-stats {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: none;
+        border-radius: 0.5rem;
+    }
+    
+    .event-item {
+        border-left: 3px solid #e9ecef;
+        padding-left: 1rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .event-item:hover {
+        border-left-color: #007bff;
+        background-color: #f8f9fa;
+        padding: 0.75rem 0.75rem 0.75rem 1rem;
+        border-radius: 0.25rem;
+    }
+    
+    .event-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .event-date {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .event-importance {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+    }
+    
+    .importance-high {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .importance-medium {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    
+    .importance-low {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 0.75rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e9ecef;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 2rem;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -1.75rem;
+        top: 0.5rem;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #007bff;
+        border: 3px solid white;
+        box-shadow: 0 0 0 3px #e9ecef;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="thread-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-2">{{ thread.name }}</h1>
+                {% if thread.description %}
+                <p class="mb-2 opacity-75">{{ thread.description }}</p>
+                {% endif %}
+                <small class="opacity-75">
+                    <i class="fas fa-tag me-1"></i>Topic: {{ thread.topic.name }}
+                    {% if thread.start_date %}
+                    • <i class="fas fa-calendar me-1"></i>Started {{ thread.start_date.strftime('%B %d, %Y') if thread.start_date is not string else thread.start_date[:10] }}
+                    {% endif %}
+                    • <i class="fas fa-plus-circle me-1"></i>Created {{ thread.created_at.strftime('%B %d, %Y') if thread.created_at is not string else thread.created_at[:10] }}
+                </small>
+            </div>
+            <div>
+                <a href="{{ url_for('admin_stories') }}" class="btn btn-light me-2">
+                    <i class="fas fa-newspaper me-1"></i>Manage Stories
+                </a>
+                <a href="{{ url_for('admin_edit_thread', thread_id=thread.id) }}" class="btn btn-light me-2">
+                    <i class="fas fa-edit me-1"></i>Edit Thread
+                </a>
+                <a href="{{ url_for('admin_threads', topic_id=thread.topic_id) }}" class="btn btn-outline-light">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Threads
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card thread-stats">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-alt text-primary mb-2" style="font-size: 2rem;"></i>
+                    <h4 class="mb-0">{{ thread.event_count }}</h4>
+                    <small class="text-muted">Events</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card thread-stats">
+                <div class="card-body text-center">
+                    <i class="fas fa-newspaper text-warning mb-2" style="font-size: 2rem;"></i>
+                    <h4 class="mb-0">{{ thread.story_count }}</h4>
+                    <small class="text-muted">Stories</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card thread-stats">
+                <div class="card-body text-center">
+                    <i class="fas fa-play text-success mb-2" style="font-size: 2rem;"></i>
+                    <h6 class="mb-0">
+                        {% if thread.first_event_date %}
+                        {{ thread.first_event_date.strftime('%Y-%m-%d') if thread.first_event_date is not string else thread.first_event_date[:10] }}
+                        {% else %}
+                        No Events
+                        {% endif %}
+                    </h6>
+                    <small class="text-muted">First Event</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card thread-stats">
+                <div class="card-body text-center">
+                    <i class="fas fa-stop text-danger mb-2" style="font-size: 2rem;"></i>
+                    <h6 class="mb-0">
+                        {% if thread.last_event_date %}
+                        {{ thread.last_event_date.strftime('%Y-%m-%d') if thread.last_event_date is not string else thread.last_event_date[:10] }}
+                        {% else %}
+                        No Events
+                        {% endif %}
+                    </h6>
+                    <small class="text-muted">Last Event</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card thread-stats">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock text-info mb-2" style="font-size: 2rem;"></i>
+                    <h6 class="mb-0">
+                        {% if thread.start_date %}
+                        {{ thread.start_date.strftime('%Y-%m-%d') if thread.start_date is not string else thread.start_date[:10] }}
+                        {% else %}
+                        Not Set
+                        {% endif %}
+                    </h6>
+                    <small class="text-muted">Thread Start</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Events Timeline -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-timeline me-2"></i>Events Timeline
+                {% if events %}
+                <span class="badge bg-primary ms-2">{{ events|length }}</span>
+                {% endif %}
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if events %}
+            <div class="timeline">
+                {% for event in events %}
+                <div class="timeline-item">
+                    <div class="event-item">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="event-date">
+                                {{ event.event_date.strftime('%B %d, %Y') if event.event_date is not string else event.event_date[:10] }}
+                            </div>
+                            {% if event.importance %}
+                            <span class="event-importance importance-{{ event.importance.lower() }}">
+                                {{ event.importance.title() }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        <p class="mb-2">{{ event.claim_text[:200] }}{% if event.claim_text|length > 200 %}...{% endif %}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="fas fa-newspaper me-1"></i>
+                                {% if event.primary_story %}
+                                {{ event.primary_story.title[:50] }}{% if event.primary_story.title|length > 50 %}...{% endif %}
+                                {% else %}
+                                No Story
+                                {% endif %}
+                            </small>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('admin_view_event', event_id=event.id) }}" 
+                                   class="btn btn-outline-primary btn-sm" title="View Event">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ url_for('admin_edit_event', event_id=event.id) }}" 
+                                   class="btn btn-outline-warning btn-sm" title="Edit Event">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <!-- Empty State -->
+            <div class="empty-state">
+                <i class="fas fa-calendar-times"></i>
+                <h4>No Events Yet</h4>
+                <p class="mb-3">This thread doesn't have any events yet. Events will appear here once they're assigned to this thread. For now, you can manage stories to organize content within this thread.</p>
+                <a href="{{ url_for('admin_stories') }}" class="btn btn-primary">
+                    <i class="fas fa-newspaper me-1"></i>Manage Stories
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Stories Section -->
+    {% if stories %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-newspaper text-warning me-2"></i>Associated Stories
+                <span class="badge bg-warning ms-2">{{ stories|length }}</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for story in stories %}
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">{{ story.title[:80] }}{% if story.title|length > 80 %}...{% endif %}</h6>
+                            <p class="card-text text-muted small mb-2">
+                                <i class="fas fa-globe me-1"></i>{{ story.source_name }}
+                                {% if story.published_at %}
+                                • <i class="fas fa-calendar me-1"></i>{{ story.published_at.strftime('%Y-%m-%d') if story.published_at is not string else story.published_at[:10] }}
+                                {% endif %}
+                            </p>
+                            {% if story.summary %}
+                            <p class="card-text small">{{ story.summary[:150] }}{% if story.summary|length > 150 %}...{% endif %}</p>
+                            {% endif %}
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>{{ story.created_at.strftime('%Y-%m-%d') if story.created_at is not string else story.created_at[:10] }}
+                                </small>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('admin_view_story', story_id=story.id) }}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('admin_edit_story', story_id=story.id) }}" class="btn btn-outline-warning btn-sm">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

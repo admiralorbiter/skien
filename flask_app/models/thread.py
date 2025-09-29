@@ -21,6 +21,9 @@ class Thread(BaseModel):
     topic = db.relationship('Topic')
     events = db.relationship('EventClaim', backref='thread_obj', lazy='dynamic')
     
+    # Many-to-many relationship with stories
+    stories = db.relationship('Story', secondary='thread_stories', backref='threads', lazy='dynamic')
+    
     # Indexes and constraints
     __table_args__ = (
         Index('idx_thread_topic', 'topic_id'),
@@ -212,3 +215,100 @@ class Thread(BaseModel):
             data['last_event_date'] = last_date.isoformat() if last_date else None
         
         return data
+    
+    def get_stories(self):
+        """Get all stories associated with this thread"""
+        try:
+            return list(self.stories)
+        except Exception as e:
+            current_app.logger.error(f"Error getting stories for thread {self.id}: {str(e)}")
+            return []
+    
+    def add_story(self, story):
+        """Add a story to this thread"""
+        try:
+            from .thread_story import thread_stories_table
+
+            # Check if relationship already exists
+            existing = db.session.execute(
+                db.select(thread_stories_table).where(
+                    (thread_stories_table.c.thread_id == self.id) & 
+                    (thread_stories_table.c.story_id == story.id)
+                )
+            ).first()
+            if existing:
+                return True, "Story already associated with this thread"
+
+            # Create new relationship
+            db.session.execute(
+                thread_stories_table.insert().values(
+                    thread_id=self.id,
+                    story_id=story.id
+                )
+            )
+            db.session.commit()
+            return True, None
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error adding story {story.id} to thread {self.id}: {str(e)}")
+            return False, str(e)
+
+    def remove_story(self, story):
+        """Remove a story from this thread"""
+        try:
+            from .thread_story import thread_stories_table
+
+            # Find and delete the relationship
+            result = db.session.execute(
+                thread_stories_table.delete().where(
+                    (thread_stories_table.c.thread_id == self.id) & 
+                    (thread_stories_table.c.story_id == story.id)
+                )
+            )
+            db.session.commit()
+            if result.rowcount > 0:
+                return True, None
+            return True, "Story not associated with this thread"
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error removing story {story.id} from thread {self.id}: {str(e)}")
+            return False, str(e)
+
+    def set_stories(self, story_ids):
+        """Set stories for this thread (replaces existing stories)"""
+        try:
+            from .story import Story
+            from .thread_story import thread_stories_table
+
+            # Remove existing story relationships
+            db.session.execute(
+                thread_stories_table.delete().where(
+                    thread_stories_table.c.thread_id == self.id
+                )
+            )
+
+            # Add new stories
+            for story_id in story_ids:
+                story = Story.query.get(story_id)
+                if story:
+                    # Create new thread-story relationship
+                    db.session.execute(
+                        thread_stories_table.insert().values(
+                            thread_id=self.id,
+                            story_id=story.id
+                        )
+                    )
+
+            db.session.commit()
+            return True, None
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error setting stories for thread {self.id}: {str(e)}")
+            return False, str(e)
+    
+    def get_story_count(self):
+        """Get number of stories in this thread"""
+        try:
+            return self.stories.count()
+        except Exception:
+            return 0

@@ -967,3 +967,356 @@ def register_admin_routes(app):
             current_app.logger.error(f"Error in create story: {str(e)}")
             flash('An error occurred while loading the create story page.', 'danger')
             return redirect(url_for('admin_stories'))
+
+    # ===== THREAD MANAGEMENT ROUTES =====
+    
+    @app.route('/admin/topics/<int:topic_id>/threads')
+    @login_required
+    @admin_required
+    def admin_threads(topic_id):
+        """Admin threads management page for a specific topic"""
+        try:
+            from flask_app.models import Topic, Thread
+
+            # Get the topic
+            topic = Topic.query.get_or_404(topic_id)
+
+            # Get all threads for this topic with statistics
+            threads = Thread.find_by_topic(topic_id)
+            threads_with_stats = []
+
+            for thread in threads:
+                thread_data = thread.to_dict(include_counts=True, include_dates=True)
+                # Add the count attributes that templates expect
+                thread_data['event_count'] = thread.get_event_count()
+                threads_with_stats.append(thread_data)
+
+            # Log admin action
+            AdminLog.log_action(
+                admin_user_id=current_user.id,
+                action='VIEW_THREADS',
+                target_topic_id=topic.id,
+                details=f'Viewed threads for topic: {topic.name}',
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent')
+            )
+
+            return render_template('admin/threads.html', 
+                                 topic=topic, 
+                                 threads=threads_with_stats)
+
+        except Exception as e:
+            current_app.logger.error(f"Error in admin_threads: {str(e)}")
+            flash('An error occurred while loading threads.', 'danger')
+            return redirect(url_for('admin_topics'))
+
+    @app.route('/admin/threads/<int:thread_id>')
+    @login_required
+    @admin_required
+    def admin_view_thread(thread_id):
+        """View thread details"""
+        try:
+            from flask_app.models import Thread, EventClaim
+
+            thread = Thread.query.get_or_404(thread_id)
+
+            # Get events for this thread
+            events = thread.get_events_by_date()
+            
+            # Get stories for this thread
+            stories = thread.get_stories()
+
+            # Add count attributes to thread for template
+            thread.event_count = thread.get_event_count()
+            thread.story_count = thread.get_story_count()
+            first_date, last_date = thread.get_date_range()
+            thread.first_event_date = first_date
+            thread.last_event_date = last_date
+
+            # Log admin action
+            AdminLog.log_action(
+                admin_user_id=current_user.id,
+                action='VIEW_THREAD',
+                target_thread_id=thread.id,
+                details=f'Viewed thread: {thread.name}',
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent')
+            )
+
+            return render_template('admin/view_thread.html',
+                                 thread=thread,
+                                 events=events,
+                                 stories=stories)
+
+        except Exception as e:
+            current_app.logger.error(f"Error viewing thread {thread_id}: {str(e)}")
+            flash('An error occurred while loading the thread.', 'danger')
+            return redirect(url_for('admin_topics'))
+
+    @app.route('/admin/topics/<int:topic_id>/threads/create', methods=['GET', 'POST'])
+    @login_required
+    @admin_required
+    def admin_create_thread(topic_id):
+        """Create new thread within a topic"""
+        try:
+            from flask_app.models import Topic, Thread
+
+            topic = Topic.query.get_or_404(topic_id)
+
+            if request.method == 'POST':
+                # Get form data
+                name = request.form.get('name', '').strip()
+                description = request.form.get('description', '').strip()
+                start_date_str = request.form.get('start_date', '').strip()
+
+                # Validate required fields
+                if not name:
+                    flash('Thread name is required.', 'danger')
+                    return render_template('admin/create_thread.html', topic=topic)
+
+                # Check for duplicate name within topic
+                existing_thread = Thread.find_by_name(name, topic_id)
+                if existing_thread:
+                    flash('A thread with this name already exists in this topic.', 'danger')
+                    return render_template('admin/create_thread.html', topic=topic)
+
+                # Parse start date
+                start_date = None
+                if start_date_str:
+                    try:
+                        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    except ValueError:
+                        flash('Invalid date format. Use YYYY-MM-DD.', 'danger')
+                        return render_template('admin/create_thread.html', topic=topic)
+
+                # Create thread
+                thread = Thread(
+                    topic_id=topic_id,
+                    name=name,
+                    description=description if description else None,
+                    start_date=start_date
+                )
+
+                # Validate thread
+                validation_errors = thread.validate()
+                if validation_errors:
+                    for error in validation_errors:
+                        flash(error, 'danger')
+                    return render_template('admin/create_thread.html', topic=topic)
+
+                try:
+                    db.session.add(thread)
+                    db.session.commit()
+
+                    # Log admin action
+                    AdminLog.log_action(
+                        admin_user_id=current_user.id,
+                        action='CREATE_THREAD',
+                        target_thread_id=thread.id,
+                        target_topic_id=topic.id,
+                        details=f'Created thread: {thread.name}',
+                        ip_address=request.remote_addr,
+                        user_agent=request.headers.get('User-Agent')
+                    )
+
+                    flash('Thread created successfully!', 'success')
+                    return redirect(url_for('admin_view_thread', thread_id=thread.id))
+
+                except Exception as e:
+                    db.session.rollback()
+                    current_app.logger.error(f"Error creating thread: {str(e)}")
+                    flash('An error occurred while creating the thread.', 'danger')
+
+            return render_template('admin/create_thread.html', topic=topic)
+
+        except Exception as e:
+            current_app.logger.error(f"Error in create thread: {str(e)}")
+            flash('An error occurred while loading the create thread page.', 'danger')
+            return redirect(url_for('admin_topics'))
+
+    @app.route('/admin/threads/<int:thread_id>/edit', methods=['GET', 'POST'])
+    @login_required
+    @admin_required
+    def admin_edit_thread(thread_id):
+        """Edit thread"""
+        try:
+            from flask_app.models import Thread
+
+            thread = Thread.query.get_or_404(thread_id)
+
+            if request.method == 'POST':
+                # Get form data
+                name = request.form.get('name', '').strip()
+                description = request.form.get('description', '').strip()
+                start_date_str = request.form.get('start_date', '').strip()
+
+                # Validate required fields
+                if not name:
+                    flash('Thread name is required.', 'danger')
+                    # Get data for template
+                    current_stories = thread.get_stories()
+                    current_story_ids = [story.id for story in current_stories]
+                    from flask_app.models import Story
+                    all_stories = Story.query.order_by(Story.title.asc()).all()
+                    return render_template('admin/edit_thread.html', 
+                                         thread=thread,
+                                         current_story_ids=current_story_ids,
+                                         all_stories=all_stories)
+
+                # Check for duplicate name within topic (excluding current thread)
+                existing_thread = Thread.find_by_name(name, thread.topic_id)
+                if existing_thread and existing_thread.id != thread.id:
+                    flash('A thread with this name already exists in this topic.', 'danger')
+                    # Get data for template
+                    current_stories = thread.get_stories()
+                    current_story_ids = [story.id for story in current_stories]
+                    from flask_app.models import Story
+                    all_stories = Story.query.order_by(Story.title.asc()).all()
+                    return render_template('admin/edit_thread.html', 
+                                         thread=thread,
+                                         current_story_ids=current_story_ids,
+                                         all_stories=all_stories)
+
+                # Parse start date
+                start_date = None
+                if start_date_str:
+                    try:
+                        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    except ValueError:
+                        flash('Invalid date format. Use YYYY-MM-DD.', 'danger')
+                        # Get data for template
+                        current_stories = thread.get_stories()
+                        current_story_ids = [story.id for story in current_stories]
+                        from flask_app.models import Story
+                        all_stories = Story.query.order_by(Story.title.asc()).all()
+                        return render_template('admin/edit_thread.html', 
+                                             thread=thread,
+                                             current_story_ids=current_story_ids,
+                                             all_stories=all_stories)
+
+                # Update thread
+                thread.name = name
+                thread.description = description if description else None
+                thread.start_date = start_date
+
+                # Handle story assignments
+                story_ids = request.form.getlist('stories')
+                if story_ids:
+                    # Convert string IDs to integers
+                    story_ids = [int(sid) for sid in story_ids if sid.isdigit()]
+                    success, error = thread.set_stories(story_ids)
+                    if not success:
+                        flash(f'Error updating stories: {error}', 'danger')
+                        # Get data for template
+                        current_stories = thread.get_stories()
+                        current_story_ids = [story.id for story in current_stories]
+                        from flask_app.models import Story
+                        all_stories = Story.query.order_by(Story.title.asc()).all()
+                        return render_template('admin/edit_thread.html', 
+                                             thread=thread,
+                                             current_story_ids=current_story_ids,
+                                             all_stories=all_stories)
+                else:
+                    # No stories selected, clear all story assignments
+                    thread.set_stories([])
+
+                # Validate thread
+                validation_errors = thread.validate()
+                if validation_errors:
+                    for error in validation_errors:
+                        flash(error, 'danger')
+                    # Get data for template
+                    current_stories = thread.get_stories()
+                    current_story_ids = [story.id for story in current_stories]
+                    from flask_app.models import Story
+                    all_stories = Story.query.order_by(Story.title.asc()).all()
+                    return render_template('admin/edit_thread.html', 
+                                         thread=thread,
+                                         current_story_ids=current_story_ids,
+                                         all_stories=all_stories)
+
+                try:
+                    db.session.commit()
+
+                    # Log admin action
+                    AdminLog.log_action(
+                        admin_user_id=current_user.id,
+                        action='UPDATE_THREAD',
+                        target_thread_id=thread.id,
+                        target_topic_id=thread.topic_id,
+                        details=f'Updated thread: {thread.name}',
+                        ip_address=request.remote_addr,
+                        user_agent=request.headers.get('User-Agent')
+                    )
+
+                    flash('Thread updated successfully!', 'success')
+                    return redirect(url_for('admin_view_thread', thread_id=thread.id))
+
+                except Exception as e:
+                    db.session.rollback()
+                    current_app.logger.error(f"Error updating thread: {str(e)}")
+                    flash('An error occurred while updating the thread.', 'danger')
+
+            # Get current stories for display
+            current_stories = thread.get_stories()
+            current_story_ids = [story.id for story in current_stories]
+
+            # Get all available stories
+            from flask_app.models import Story
+            all_stories = Story.query.order_by(Story.title.asc()).all()
+
+            return render_template('admin/edit_thread.html', 
+                                 thread=thread,
+                                 current_story_ids=current_story_ids,
+                                 all_stories=all_stories)
+
+        except Exception as e:
+            current_app.logger.error(f"Error editing thread {thread_id}: {str(e)}")
+            flash('An error occurred while loading the thread for editing.', 'danger')
+            return redirect(url_for('admin_topics'))
+
+    @app.route('/admin/threads/<int:thread_id>/delete', methods=['POST'])
+    @login_required
+    @admin_required
+    def admin_delete_thread(thread_id):
+        """Delete thread"""
+        try:
+            from flask_app.models import Thread
+
+            thread = Thread.query.get_or_404(thread_id)
+            thread_name = thread.name
+            topic_id = thread.topic_id
+
+            # Check if thread has events
+            event_count = thread.get_event_count()
+            if event_count > 0:
+                flash(f'Cannot delete thread with {event_count} events. Please move or delete events first.', 'danger')
+                return redirect(url_for('admin_view_thread', thread_id=thread_id))
+
+            try:
+                db.session.delete(thread)
+                db.session.commit()
+
+                # Log admin action
+                AdminLog.log_action(
+                    admin_user_id=current_user.id,
+                    action='DELETE_THREAD',
+                    target_topic_id=topic_id,
+                    details=f'Deleted thread: {thread_name}',
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent')
+                )
+
+                flash('Thread deleted successfully!', 'success')
+                return redirect(url_for('admin_threads', topic_id=topic_id))
+
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Error deleting thread: {str(e)}")
+                flash('An error occurred while deleting the thread.', 'danger')
+                return redirect(url_for('admin_view_thread', thread_id=thread_id))
+
+        except Exception as e:
+            current_app.logger.error(f"Error in delete thread: {str(e)}")
+            flash('An error occurred while deleting the thread.', 'danger')
+            return redirect(url_for('admin_topics'))

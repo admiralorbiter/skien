@@ -15,6 +15,7 @@ class AdminLog(BaseModel):
     target_story_id = db.Column(db.Integer, db.ForeignKey('stories.id'), nullable=True)
     target_event_id = db.Column(db.Integer, db.ForeignKey('event_claims.id'), nullable=True)
     target_topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=True)
+    target_thread_id = db.Column(db.Integer, db.ForeignKey('threads.id'), nullable=True)
     details = db.Column(db.Text, nullable=True)  # JSON string with action details
     ip_address = db.Column(db.String(45), nullable=True)
     user_agent = db.Column(db.Text, nullable=True)
@@ -24,8 +25,8 @@ class AdminLog(BaseModel):
     
     @staticmethod
     def log_action(admin_user_id, action, target_user_id=None, target_story_id=None, 
-                   target_event_id=None, target_topic_id=None, details=None, 
-                   ip_address=None, user_agent=None):
+                   target_event_id=None, target_topic_id=None, target_thread_id=None, 
+                   details=None, ip_address=None, user_agent=None):
         """Log an admin action"""
         try:
             log_entry = AdminLog(
@@ -35,6 +36,7 @@ class AdminLog(BaseModel):
                 target_story_id=target_story_id,
                 target_event_id=target_event_id,
                 target_topic_id=target_topic_id,
+                target_thread_id=target_thread_id,
                 details=details,
                 ip_address=ip_address,
                 user_agent=user_agent
