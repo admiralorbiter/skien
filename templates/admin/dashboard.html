@@ -54,6 +54,36 @@
                 <p>New Users (30 days)</p>
             </div>
         </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-newspaper"></i>
+            </div>
+            <div class="stat-content">
+                <h3>{{ stats.total_stories or 0 }}</h3>
+                <p>Total Stories</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-calendar-alt"></i>
+            </div>
+            <div class="stat-content">
+                <h3>{{ stats.total_events or 0 }}</h3>
+                <p>Events</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-tags"></i>
+            </div>
+            <div class="stat-content">
+                <h3>{{ stats.total_topics or 0 }}</h3>
+                <p>Topics</p>
+            </div>
+        </div>
     </div>
 
     <!-- Quick Actions -->
@@ -68,6 +98,12 @@
             </a>
             <a href="{{ url_for('admin_logs') }}" class="btn btn-info">
                 <i class="fas fa-history"></i> View Logs
+            </a>
+            <a href="{{ url_for('admin_stories') }}" class="btn btn-success">
+                <i class="fas fa-newspaper"></i> Manage Stories
+            </a>
+            <a href="{{ url_for('import.index') }}" class="btn btn-warning">
+                <i class="fas fa-upload"></i> Import Stories
             </a>
         </div>
     </div>

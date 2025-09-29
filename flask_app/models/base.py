@@ -107,13 +107,19 @@ class BaseModel(db.Model):
         
         self.updated_at = datetime.now(timezone.utc)
     
-    def validate(self):
+    def validate(self, exclude_auto_fields=True):
         """Validate model instance - override in subclasses"""
         errors = []
+        
+        # Auto-generated fields that shouldn't be validated during import
+        auto_fields = {'id', 'created_at', 'updated_at', 'captured_at'}
         
         # Check required fields
         for column in self.__table__.columns:
             if column.nullable is False and getattr(self, column.name) is None:
+                # Skip auto-generated fields during import
+                if exclude_auto_fields and column.name in auto_fields:
+                    continue
                 errors.append(f"{column.name} is required")
         
         return errors

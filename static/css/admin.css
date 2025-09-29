@@ -26,7 +26,8 @@
     color: var(--raisin-black);
     margin: 0.5rem 0 0 0;
     font-size: 1.1rem;
-    opacity: 0.8;
+    opacity: 1;
+    font-weight: 500;
 }
 
 .header-actions {
@@ -82,7 +83,8 @@
     color: var(--raisin-black);
     margin: 0.5rem 0 0 0;
     font-size: 1rem;
-    opacity: 0.8;
+    opacity: 1;
+    font-weight: 600;
 }
 
 /* Quick Actions */
@@ -94,6 +96,7 @@
     color: var(--dark-purple);
     margin-bottom: 1.5rem;
     font-size: 1.8rem;
+    font-weight: 700;
 }
 
 .action-buttons {
@@ -107,6 +110,20 @@
     border-radius: 0.5rem;
     font-weight: 500;
     transition: all 0.3s ease;
+}
+
+/* Form button styling */
+.form-group .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-group .btn:last-child {
+    margin-right: 0;
 }
 
 .action-buttons .btn:hover {
@@ -226,21 +243,58 @@
     margin-bottom: 0.5rem;
 }
 
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
 .form-control {
-    border: 2px solid var(--eggplant);
+    border: 2px solid #dee2e6;
     border-radius: 0.5rem;
     padding: 0.75rem;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    font-weight: 500;
+    color: var(--raisin-black);
 }
 
 .form-control:focus {
     border-color: var(--redwood);
     box-shadow: 0 0 0 0.2rem rgba(183, 93, 105, 0.25);
+    outline: none;
 }
 
-.form-check-input:checked {
+.form-control::placeholder {
+    color: #6c757d;
+    font-weight: 400;
+}
+
+.form-check-label {
+    color: var(--raisin-black);
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+/* Let Bootstrap handle checkbox styling - only customize colors */
+.form-check-input[type="checkbox"] {
+    cursor: pointer;
+}
+
+.form-check-input[type="checkbox"]:checked {
     background-color: var(--redwood);
     border-color: var(--redwood);
+}
+
+.form-check-input[type="checkbox"]:focus {
+    border-color: var(--redwood);
+    box-shadow: 0 0 0 0.25rem rgba(183, 93, 105, 0.25);
+}
+
+.form-check-label {
+    cursor: pointer;
+    margin-left: 0.5rem;
 }
 
 /* Info Items */
@@ -257,6 +311,20 @@
 
 .info-item span {
     color: var(--raisin-black);
+    font-weight: 500;
+}
+
+/* Readonly values styling */
+.readonly-value {
+    display: block;
+    padding: 0.75rem;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    color: var(--raisin-black) !important;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-top: 0.25rem;
 }
 
 /* Button Styles */
@@ -320,14 +388,16 @@
 }
 
 .btn-secondary {
-    background-color: var(--eggplant);
-    border-color: var(--eggplant);
+    background-color: #6c757d;
+    border-color: #6c757d;
     color: white;
+    font-weight: 600;
 }
 
 .btn-secondary:hover {
-    background-color: var(--dark-purple);
-    border-color: var(--dark-purple);
+    background-color: #5a6268;
+    border-color: #545b62;
+    color: white;
 }
 
 .btn-outline-primary {

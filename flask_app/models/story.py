@@ -39,12 +39,17 @@ class Story(BaseModel):
         CheckConstraint('length(source_name) > 0', name='ck_story_source_not_empty'),
     )
     
+    @classmethod
+    def find_by_url(cls, url):
+        """Find a story by URL"""
+        return cls.query.filter_by(url=url).first()
+    
     def __repr__(self):
         return f'<Story {self.id}: {self.title[:50]}...>'
     
-    def validate(self):
+    def validate(self, exclude_auto_fields=True):
         """Validate story instance"""
-        errors = super().validate()
+        errors = super().validate(exclude_auto_fields=exclude_auto_fields)
         
         # URL validation
         if self.url:

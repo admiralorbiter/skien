@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}System Logs - Admin - SKIEN{% endblock %}
+
+{% block sidebar %}
+<div class="col-md-3">
+    <div class="sidebar">
+        <div class="p-3">
+            <h6 class="text-muted text-uppercase fw-bold mb-3">Admin Panel</h6>
+            <nav class="nav flex-column">
+                <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
+                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                </a>
+                <a class="nav-link" href="{{ url_for('admin_users') }}">
+                    <i class="fas fa-users me-2"></i>Users
+                </a>
+                <a class="nav-link" href="{{ url_for('admin_stories') }}">
+                    <i class="fas fa-newspaper me-2"></i>Stories
+                </a>
+                <a class="nav-link" href="{{ url_for('admin_events') }}">
+                    <i class="fas fa-calendar-alt me-2"></i>Events
+                </a>
+                <a class="nav-link" href="{{ url_for('admin_topics') }}">
+                    <i class="fas fa-tags me-2"></i>Topics
+                </a>
+                <a class="nav-link active" href="{{ url_for('admin_logs') }}">
+                    <i class="fas fa-file-alt me-2"></i>System Logs
+                </a>
+                <a class="nav-link" href="{{ url_for('admin_metrics') }}">
+                    <i class="fas fa-chart-bar me-2"></i>Metrics
+                </a>
+            </nav>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-file-alt me-2"></i>System Logs</h2>
+    <div>
+        <button class="btn btn-outline-primary" onclick="refreshLogs()">
+            <i class="fas fa-sync-alt me-2"></i>Refresh
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-list me-2"></i>Admin Action Logs
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if logs.items %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Description</th>
+                        <th>IP Address</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs.items %}
+                    <tr>
+                        <td>
+                            <small class="text-muted">
+                                {{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                            </small>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ log.user.username if log.user else 'System' }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if log.action_type == 'create' else 'warning' if log.action_type == 'update' else 'danger' if log.action_type == 'delete' else 'info' }}">
+                                {{ log.action_type.title() }}
+                            </span>
+                        </td>
+                        <td>{{ log.description }}</td>
+                        <td>
+                            <small class="text-muted">{{ log.ip_address or 'N/A' }}</small>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if logs.pages > 1 %}
+        <nav aria-label="Logs pagination">
+            <ul class="pagination justify-content-center">
+                {% if logs.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('admin_logs', page=logs.prev_num) }}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+                
+                {% for page_num in logs.iter_pages() %}
+                    {% if page_num %}
+                        {% if page_num != logs.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin_logs', page=page_num) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                        {% endif %}
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">…</span>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if logs.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('admin_logs', page=logs.next_num) }}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No logs found</h5>
+            <p class="text-muted">System logs will appear here as admin actions are performed.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function refreshLogs() {
+    location.reload();
+}
+</script>
+{% endblock %}

@@ -134,11 +134,13 @@
                             </div>
                         </div>
 
-                        <div class="form-group">
+                        <div class="form-group d-flex gap-2">
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-user-plus"></i> Create User
+                                <i class="fas fa-user-plus me-2"></i> Create User
                             </button>
-                            <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">Cancel</a>
+                            <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </a>
                         </div>
                     </form>
                 </div>

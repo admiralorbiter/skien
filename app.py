@@ -16,7 +16,7 @@ from flask_app.utils.monitoring import init_monitoring
 from config import DevelopmentConfig, ProductionConfig, TestingConfig
 from config.monitoring import DevelopmentMonitoringConfig, ProductionMonitoringConfig, TestingMonitoringConfig
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates')
 # Load configuration based on the environment
 if os.environ.get('FLASK_ENV') == 'production':
     app.config.from_object(ProductionConfig)

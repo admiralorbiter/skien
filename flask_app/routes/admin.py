@@ -29,10 +29,13 @@ def register_admin_routes(app):
     def admin_dashboard():
         """Admin dashboard main page"""
         try:
+            from flask_app.models import Story
+            
             # Get system statistics
             total_users = User.query.count()
             active_users = User.query.filter_by(is_active=True).count()
             admin_users = User.query.filter_by(is_admin=True).count()
+            total_stories = Story.query.count()
             
             # Get recent users (last 30 days)
             thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
@@ -45,11 +48,15 @@ def register_admin_routes(app):
             SystemMetrics.set_metric('total_users', total_users)
             SystemMetrics.set_metric('active_users', active_users)
             SystemMetrics.set_metric('admin_users', admin_users)
+            SystemMetrics.set_metric('total_stories', total_stories)
             
             stats = {
                 'total_users': total_users,
                 'active_users': active_users,
                 'admin_users': admin_users,
+                'total_stories': total_stories,
+                'total_events': 0,  # TODO: Add when events are implemented
+                'total_topics': 0,  # TODO: Add when topics are implemented
                 'recent_users': recent_users,
                 'recent_actions': recent_actions
             }
@@ -87,7 +94,14 @@ def register_admin_routes(app):
     @admin_required
     def admin_create_user():
         """Create new user"""
+        # Create form
         form = CreateUserForm()
+        
+        # For GET requests, set default values after form creation
+        if request.method == 'GET':
+            form.is_active.default = True
+            form.is_admin.default = False
+            form.process()  # Re-process the form to apply defaults
         
         try:
             if form.validate_on_submit():
@@ -311,3 +325,94 @@ def register_admin_routes(app):
         except Exception as e:
             current_app.logger.error(f"Error getting stats: {str(e)}")
             return jsonify({'error': 'Failed to get statistics'}), 500
+    
+    @app.route('/admin/stories')
+    @login_required
+    @admin_required
+    def admin_stories():
+        """Admin stories management page"""
+        try:
+            from flask_app.models import Story
+            
+            page = request.args.get('page', 1, type=int)
+            per_page = 20
+            search = request.args.get('search', '')
+            source = request.args.get('source', '')
+            date_from = request.args.get('date_from', '')
+            date_to = request.args.get('date_to', '')
+            
+            # Build query
+            query = Story.query
+            
+            if search:
+                query = query.filter(Story.title.contains(search))
+            
+            if source:
+                query = query.filter(Story.source_name == source)
+            
+            if date_from:
+                try:
+                    date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
+                    query = query.filter(Story.published_at >= date_from_obj)
+                except ValueError:
+                    pass
+            
+            if date_to:
+                try:
+                    date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
+                    query = query.filter(Story.published_at <= date_to_obj)
+                except ValueError:
+                    pass
+            
+            # Get paginated results
+            stories = query.order_by(desc(Story.created_at)).paginate(
+                page=page, per_page=per_page, error_out=False
+            )
+            
+            # Get unique sources for filter dropdown
+            sources = db.session.query(Story.source_name).distinct().all()
+            sources = [s[0] for s in sources if s[0]]
+            
+            # Get stats for dashboard
+            stats = {
+                'total_stories': Story.query.count(),
+                'total_events': 0,  # TODO: Add when events are implemented
+                'total_topics': 0,  # TODO: Add when topics are implemented
+                'total_users': User.query.count()
+            }
+            
+            current_app.logger.info(f"Admin stories page accessed by {current_user.username}")
+            return render_template('admin/stories.html', 
+                                 stories=stories, 
+                                 sources=sources,
+                                 stats=stats)
+            
+        except Exception as e:
+            current_app.logger.error(f"Error in admin stories: {str(e)}")
+            flash('An error occurred while loading stories.', 'danger')
+            return render_template('admin/stories.html', stories=None, sources=[], stats={})
+    
+    @app.route('/admin/events')
+    @login_required
+    @admin_required
+    def admin_events():
+        """Admin events management page - placeholder"""
+        flash('Events management coming soon!', 'info')
+        return redirect(url_for('admin_dashboard'))
+    
+    @app.route('/admin/topics')
+    @login_required
+    @admin_required
+    def admin_topics():
+        """Admin topics management page - placeholder"""
+        flash('Topics management coming soon!', 'info')
+        return redirect(url_for('admin_dashboard'))
+    
+    
+    @app.route('/admin/metrics')
+    @login_required
+    @admin_required
+    def admin_metrics():
+        """Admin system metrics page - placeholder"""
+        flash('System metrics coming soon!', 'info')
+        return redirect(url_for('admin_dashboard'))

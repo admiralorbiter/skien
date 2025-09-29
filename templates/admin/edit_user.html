@@ -29,29 +29,15 @@
                         
                         <div class="row">
                             <div class="col-md-6">
-                                <div class="form-group">
-                                    {{ form.username.label(class="form-label") }}
-                                    {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else "")) }}
-                                    {% if form.username.errors %}
-                                        <div class="invalid-feedback">
-                                            {% for error in form.username.errors %}
-                                                {{ error }}
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
+                                <div class="info-item">
+                                    <label class="form-label">Username:</label>
+                                    <span class="readonly-value">{{ user.username }}</span>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="form-group">
-                                    {{ form.email.label(class="form-label") }}
-                                    {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
-                                    {% if form.email.errors %}
-                                        <div class="invalid-feedback">
-                                            {% for error in form.email.errors %}
-                                                {{ error }}
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
+                                <div class="info-item">
+                                    <label class="form-label">Email:</label>
+                                    <span class="readonly-value">{{ user.email }}</span>
                                 </div>
                             </div>
                         </div>

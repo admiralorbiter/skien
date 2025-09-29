@@ -1,0 +1,691 @@
+{% extends "base.html" %}
+
+{% block title %}Import Stories - SKIEN{% endblock %}
+
+{% block extra_css %}
+<style>
+    .upload-area {
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        padding: 40px;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .upload-area:hover {
+        border-color: var(--secondary-color);
+        background-color: #f8f9fa;
+    }
+    
+    .upload-area.dragover {
+        border-color: var(--secondary-color);
+        background-color: #e3f2fd;
+    }
+    
+    .step {
+        display: none;
+    }
+    
+    .step.active {
+        display: block;
+    }
+    
+    .preview-table {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .validation-error {
+        color: var(--danger-color);
+        font-size: 0.875em;
+    }
+    
+    .validation-success {
+        color: var(--success-color);
+        font-size: 0.875em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-upload me-2"></i>Import Stories</h2>
+    <div>
+        <a href="{{ url_for('admin_stories') }}" class="btn btn-outline-primary">
+            <i class="fas fa-list me-2"></i>View All Stories
+        </a>
+    </div>
+</div>
+
+<!-- Import Steps -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-list-ol me-2"></i>Import Process
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="step-indicator active" id="step1-indicator">
+                        <i class="fas fa-upload fa-2x text-primary"></i>
+                        <h6 class="mt-2">Upload File</h6>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="step-indicator" id="step2-indicator">
+                        <i class="fas fa-cogs fa-2x text-muted"></i>
+                        <h6 class="mt-2">Map Columns</h6>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="step-indicator" id="step3-indicator">
+                        <i class="fas fa-eye fa-2x text-muted"></i>
+                        <h6 class="mt-2">Preview Data</h6>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="step-indicator" id="step4-indicator">
+                        <i class="fas fa-check fa-2x text-muted"></i>
+                        <h6 class="mt-2">Import</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Step 1: Upload File -->
+<div class="step active" id="step1">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-upload me-2"></i>Step 1: Upload CSV File
+            </h5>
+        </div>
+        <div class="card-body">
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="upload-area" id="uploadArea" 
+                     ondrop="return false;" 
+                     ondragover="return false;" 
+                     ondragenter="return false;">
+                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                    <h5>Drag & Drop your CSV file here</h5>
+                    <p class="text-muted">or click to browse</p>
+                    <input type="file" id="fileInput" name="file" accept=".csv" style="display: none;">
+                    <button type="button" class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-folder-open me-2"></i>Choose File
+                    </button>
+                </div>
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Supported formats: CSV files with columns for Title, URL, and Date
+                    </small>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Step 2: Map Columns -->
+<div class="step" id="step2">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-cogs me-2"></i>Step 2: Map Columns
+            </h5>
+        </div>
+        <div class="card-body">
+            <form id="mappingForm">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label for="titleColumn" class="form-label">Title Column</label>
+                        <select class="form-select" id="titleColumn" name="title_column" required>
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="urlColumn" class="form-label">URL Column</label>
+                        <select class="form-select" id="urlColumn" name="url_column" required>
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="dateColumn" class="form-label">Date Column</label>
+                        <select class="form-select" id="dateColumn" name="date_column">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-4">
+                        <label for="sourceColumn" class="form-label">Source Column (optional)</label>
+                        <select class="form-select" id="sourceColumn" name="source_column">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="authorColumn" class="form-label">Author Column (optional)</label>
+                        <select class="form-select" id="authorColumn" name="author_column">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="summaryColumn" class="form-label">Summary Column (optional)</label>
+                        <select class="form-select" id="summaryColumn" name="summary_column">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <button type="button" class="btn btn-primary" onclick="previewData()">
+                        <i class="fas fa-eye me-2"></i>Preview Data
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="goToStep(1)">
+                        <i class="fas fa-arrow-left me-2"></i>Back
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Step 3: Preview Data -->
+<div class="step" id="step3">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-eye me-2"></i>Step 3: Preview Data
+            </h5>
+        </div>
+        <div class="card-body">
+            <div id="previewContent">
+                <div class="text-center py-4">
+                    <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                    <p class="mt-2 text-muted">Loading preview...</p>
+                </div>
+            </div>
+            <div class="mt-4">
+                <button type="button" class="btn btn-success" onclick="importData()">
+                    <i class="fas fa-check me-2"></i>Import Data
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="goToStep(2)">
+                    <i class="fas fa-arrow-left me-2"></i>Back
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Step 4: Import Results -->
+<div class="step" id="step4">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-check me-2"></i>Step 4: Import Complete
+            </h5>
+        </div>
+        <div class="card-body">
+            <div id="importResults">
+                <div class="text-center py-4">
+                    <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                    <p class="mt-2 text-muted">Importing data...</p>
+                </div>
+            </div>
+            <div class="mt-4">
+                <button type="button" class="btn btn-primary" onclick="startOver()">
+                    <i class="fas fa-redo me-2"></i>Import Another File
+                </button>
+                <a href="{{ url_for('admin_stories') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-list me-2"></i>View All Stories
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+console.log('Import page JavaScript loading...');
+
+let currentStep = 1;
+let uploadedFile = null;
+let columnMapping = {};
+let previewDataStore = null;
+let serverFilename = null;
+
+// Test if DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, setting up import functionality...');
+    
+    // File upload handling
+    console.log('Setting up file upload handlers...');
+
+    const fileInput = document.getElementById('fileInput');
+    const uploadArea = document.getElementById('uploadArea');
+
+    console.log('File input element:', fileInput);
+    console.log('Upload area element:', uploadArea);
+
+    if (fileInput) {
+        fileInput.addEventListener('change', handleFileSelect);
+        console.log('File input change listener added');
+    } else {
+        console.error('File input element not found!');
+    }
+
+    if (uploadArea) {
+        uploadArea.addEventListener('click', () => {
+            console.log('Upload area clicked, triggering file input');
+            document.getElementById('fileInput').click();
+        });
+        uploadArea.addEventListener('dragenter', handleDragEnter);
+        uploadArea.addEventListener('dragover', handleDragOver);
+        uploadArea.addEventListener('dragleave', handleDragLeave);
+        uploadArea.addEventListener('drop', handleDrop);
+        console.log('Upload area event listeners added');
+    } else {
+        console.error('Upload area element not found!');
+    }
+});
+
+// Prevent default drag and drop behavior on the entire page
+document.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+});
+
+document.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+});
+
+document.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+});
+
+function handleFileSelect(event) {
+    console.log('File selected:', event.target.files);
+    const file = event.target.files[0];
+    if (file) {
+        console.log('File details:', {
+            name: file.name,
+            type: file.type,
+            size: file.size
+        });
+        
+        if (file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv')) {
+            console.log('Valid CSV file detected, processing...');
+            uploadedFile = file;
+            processFile(file);
+        } else {
+            console.log('Invalid file type:', file.type);
+            alert('Please select a valid CSV file. File type: ' + file.type);
+        }
+    } else {
+        console.log('No file selected');
+        alert('No file selected');
+    }
+}
+
+function handleDragEnter(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    document.getElementById('uploadArea').classList.add('dragover');
+}
+
+function handleDragOver(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    document.getElementById('uploadArea').classList.add('dragover');
+}
+
+function handleDragLeave(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    document.getElementById('uploadArea').classList.remove('dragover');
+}
+
+function handleDrop(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    document.getElementById('uploadArea').classList.remove('dragover');
+    
+    console.log('File dropped:', event.dataTransfer.files);
+    
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+        const file = files[0];
+        console.log('File details:', {
+            name: file.name,
+            type: file.type,
+            size: file.size
+        });
+        
+        if (file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv')) {
+            uploadedFile = file;
+            console.log('Processing CSV file:', file.name);
+            processFile(file);
+        } else {
+            alert('Please drop a valid CSV file. File type: ' + file.type);
+        }
+    } else {
+        console.log('No files in drop event');
+    }
+}
+
+function processFile(file) {
+    console.log('Processing file:', file.name);
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    console.log('Sending file to server...');
+    fetch('{{ url_for("import.upload_file") }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        console.log('Server response status:', response.status);
+        return response.json();
+    })
+    .then(data => {
+        console.log('Server response data:', data);
+        if (data.success) {
+            console.log('File processed successfully, moving to step 2');
+            serverFilename = data.filename; // Store the server filename
+            populateColumnMapping(data.columns);
+            goToStep(2);
+        } else {
+            console.error('Server error:', data.error);
+            alert('Error processing file: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Network error:', error);
+        alert('Error processing file: ' + error.message);
+    });
+}
+
+function populateColumnMapping(columns) {
+    const selects = ['titleColumn', 'urlColumn', 'dateColumn', 'sourceColumn', 'authorColumn', 'summaryColumn'];
+    
+    selects.forEach(selectId => {
+        const select = document.getElementById(selectId);
+        select.innerHTML = '<option value="">Select column...</option>';
+        
+        columns.forEach(column => {
+            const option = document.createElement('option');
+            option.value = column;
+            option.textContent = column;
+            select.appendChild(option);
+        });
+    });
+}
+
+function previewData() {
+    const mapping = {
+        title: document.getElementById('titleColumn').value,
+        url: document.getElementById('urlColumn').value,
+        date: document.getElementById('dateColumn').value,
+        source: document.getElementById('sourceColumn').value,
+        author: document.getElementById('authorColumn').value,
+        summary: document.getElementById('summaryColumn').value
+    };
+    
+    if (!mapping.title || !mapping.url) {
+        alert('Please select at least Title and URL columns.');
+        return;
+    }
+    
+    columnMapping = mapping;
+    
+    fetch('{{ url_for("import.preview_import") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            filename: serverFilename,
+            column_mapping: mapping
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Preview response data:', data);
+        if (data.success) {
+            displayPreview(data);
+            goToStep(3);
+        } else {
+            alert('Error previewing data: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error previewing data');
+    });
+}
+
+function displayPreview(data) {
+    const previewContent = document.getElementById('previewContent');
+    
+    console.log('Displaying preview with data:', data);
+    console.log('Validation results structure:', data.validation_results);
+    
+    let html = `
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            Found ${data.total_rows} rows. Showing first ${data.mapped_data.length} rows.
+        </div>
+    `;
+    
+    // Add validation summary if available
+    if (data.validation_results) {
+        const valid = data.validation_results.valid || 0;
+        const invalid = data.validation_results.invalid || 0;
+        const total = valid + invalid;
+        
+        html += `
+            <div class="alert alert-${invalid > 0 ? 'warning' : 'success'}">
+                <i class="fas fa-${invalid > 0 ? 'exclamation-triangle' : 'check-circle'} me-2"></i>
+                Validation Summary: ${valid} valid, ${invalid} invalid out of ${total} rows processed.
+            </div>
+        `;
+    }
+    
+    html += `
+        <div class="table-responsive preview-table">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>URL</th>
+                        <th>Date</th>
+                        <th>Source</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    data.mapped_data.forEach((row, index) => {
+        // Check if validation results exist for this row
+        const rowNumber = index + 1;
+        const validationError = data.validation_results && data.validation_results.errors ? 
+            data.validation_results.errors.find(v => v.row === rowNumber) : null;
+        const isValid = !validationError;
+        const error = validationError ? validationError.error : '';
+        
+        const statusClass = isValid ? 'validation-success' : 'validation-error';
+        const statusIcon = isValid ? 'fa-check' : 'fa-times';
+        const statusText = isValid ? 'Valid' : error;
+        
+        html += `
+            <tr>
+                <td>${row.title || ''}</td>
+                <td><a href="${row.url || '#'}" target="_blank">${row.url || ''}</a></td>
+                <td>${row.date || ''}</td>
+                <td>${row.source || ''}</td>
+                <td><i class="fas ${statusIcon} me-1"></i><span class="${statusClass}">${statusText}</span></td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    previewContent.innerHTML = html;
+}
+
+function importData() {
+    console.log('Starting import process...');
+    console.log('Server filename:', serverFilename);
+    console.log('Column mapping:', columnMapping);
+    
+    fetch('{{ url_for("import.process_import") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            filename: serverFilename,
+            column_mapping: columnMapping
+        })
+    })
+    .then(response => {
+        console.log('Import response status:', response.status);
+        return response.json();
+    })
+    .then(data => {
+        console.log('Import response data:', data);
+        displayImportResults(data);
+        goToStep(4);
+    })
+    .catch(error => {
+        console.error('Import error:', error);
+        alert('Error importing data: ' + error.message);
+    });
+}
+
+function displayImportResults(data) {
+    const resultsContent = document.getElementById('importResults');
+    
+    console.log('Displaying import results with data:', data);
+    
+    let html = `
+        <div class="alert alert-${data.success ? 'success' : 'danger'}">
+            <i class="fas fa-${data.success ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+            ${data.success ? 'Import completed successfully!' : 'Import failed'}
+        </div>
+    `;
+    
+    if (data.success && data.results) {
+        const results = data.results;
+        const total = results.success + results.errors + results.duplicates;
+        
+        html += `
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h4 class="text-success">${results.success}</h4>
+                            <p class="text-muted">Imported</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h4 class="text-warning">${results.duplicates}</h4>
+                            <p class="text-muted">Duplicates</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h4 class="text-danger">${results.errors}</h4>
+                            <p class="text-muted">Errors</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h4 class="text-info">${total}</h4>
+                            <p class="text-muted">Total</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Show error details if there are any
+        if (results.error_details && results.error_details.length > 0) {
+            html += `
+                <div class="alert alert-warning mt-3">
+                    <h6><i class="fas fa-exclamation-triangle me-2"></i>Error Details:</h6>
+                    <ul class="mb-0">
+                        ${results.error_details.slice(0, 10).map(error => `<li>${error}</li>`).join('')}
+                        ${results.error_details.length > 10 ? `<li>... and ${results.error_details.length - 10} more errors</li>` : ''}
+                    </ul>
+                </div>
+            `;
+        }
+    }
+    
+    resultsContent.innerHTML = html;
+}
+
+function goToStep(step) {
+    // Hide all steps
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.step-indicator').forEach(s => {
+        s.classList.remove('active');
+        s.querySelector('i').classList.remove('text-primary');
+        s.querySelector('i').classList.add('text-muted');
+    });
+    
+    // Show current step
+    document.getElementById(`step${step}`).classList.add('active');
+    const indicator = document.getElementById(`step${step}-indicator`);
+    if (indicator) {
+        indicator.classList.add('active');
+        indicator.querySelector('i').classList.remove('text-muted');
+        indicator.querySelector('i').classList.add('text-primary');
+    }
+    
+    currentStep = step;
+}
+
+function startOver() {
+    currentStep = 1;
+    uploadedFile = null;
+    columnMapping = {};
+    previewDataStore = null;
+    serverFilename = null;
+    
+    // Reset forms
+    document.getElementById('uploadForm').reset();
+    document.getElementById('mappingForm').reset();
+    
+    // Reset file input
+    document.getElementById('fileInput').value = '';
+    
+    goToStep(1);
+}
+</script>
+{% endblock %}

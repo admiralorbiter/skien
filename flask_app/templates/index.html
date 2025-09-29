@@ -2,149 +2,16 @@
 
 {% block title %}Home - SKIEN{% endblock %}
 
-{% block extra_css %}
-<style>
-    .hero-section {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 4rem 2rem;
-        border-radius: 1rem;
-        margin-bottom: 3rem;
-        box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
-        text-align: center;
-    }
-    
-    .hero-section h1 {
-        font-size: 3.5rem;
-        font-weight: 700;
-        margin-bottom: 1rem;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    }
-    
-    .hero-section .lead {
-        font-size: 1.5rem;
-        font-weight: 500;
-        margin-bottom: 0.5rem;
-        opacity: 0.95;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-    }
-    
-    .hero-section p {
-        font-size: 1.1rem;
-        opacity: 0.9;
-        margin-bottom: 2rem;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-    }
-    
-    .hero-cta {
-        background: rgba(255, 255, 255, 0.2);
-        border: 2px solid rgba(255, 255, 255, 0.3);
-        color: white;
-        padding: 1rem 2rem;
-        font-size: 1.1rem;
-        font-weight: 600;
-        border-radius: 50px;
-        transition: all 0.3s ease;
-        text-decoration: none;
-        display: inline-block;
-        backdrop-filter: blur(10px);
-    }
-    
-    .hero-cta:hover {
-        background: rgba(255, 255, 255, 0.3);
-        border-color: rgba(255, 255, 255, 0.5);
-        color: white;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-    }
-    
-    .feature-card {
-        transition: all 0.3s ease;
-        border: none;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-    
-    .feature-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
-    }
-    
-    .feature-card .card-body {
-        padding: 2rem;
-    }
-    
-    .feature-card h5 {
-        font-weight: 600;
-        margin-bottom: 1rem;
-        color: #2c3e50;
-    }
-    
-    .feature-card p {
-        color: #6c757d;
-        line-height: 1.6;
-        margin-bottom: 1.5rem;
-    }
-    
-    .stats-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem 1rem;
-        border-radius: 1rem;
-        text-align: center;
-        margin-bottom: 1rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-    
-    .stats-card h3 {
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-    
-    .stats-card p {
-        font-size: 1rem;
-        font-weight: 500;
-        margin: 0;
-        opacity: 0.9;
-    }
-    
-    .section-header {
-        color: #2c3e50;
-        font-weight: 600;
-        margin-bottom: 1.5rem;
-    }
-    
-    .section-header i {
-        color: #667eea;
-    }
-    
-    @media (max-width: 768px) {
-        .hero-section h1 {
-            font-size: 2.5rem;
-        }
-        
-        .hero-section .lead {
-            font-size: 1.2rem;
-        }
-        
-        .hero-section p {
-            font-size: 1rem;
-        }
-    }
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="row">
     <div class="col-12">
-        <div class="hero-section">
-            <h1>
+        <div class="jumbotron bg-gradient text-white rounded-3 p-5 mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <h1 class="display-4 fw-bold">
                 <i class="fas fa-project-diagram me-3"></i>Welcome to SKIEN
             </h1>
             <p class="lead">Story Knowledge Information Extraction Network</p>
-            <p>A powerful platform for analyzing and connecting news stories, events, and information threads.</p>
-            <a href="{{ url_for('import.index') }}" class="hero-cta">
+            <p class="mb-4">A powerful platform for analyzing and connecting news stories, events, and information threads.</p>
+            <a class="btn btn-light btn-lg" href="{{ url_for('import.index') }}" role="button">
                 <i class="fas fa-upload me-2"></i>Start Importing Stories
             </a>
         </div>
@@ -153,7 +20,7 @@
 
 <div class="row">
     <div class="col-md-4">
-        <div class="card h-100 feature-card">
+        <div class="card h-100">
             <div class="card-body text-center">
                 <i class="fas fa-newspaper fa-3x text-primary mb-3"></i>
                 <h5 class="card-title">Story Management</h5>
@@ -166,7 +33,7 @@
     </div>
     
     <div class="col-md-4">
-        <div class="card h-100 feature-card">
+        <div class="card h-100">
             <div class="card-body text-center">
                 <i class="fas fa-sitemap fa-3x text-success mb-3"></i>
                 <h5 class="card-title">Event Tracking</h5>
@@ -179,7 +46,7 @@
     </div>
     
     <div class="col-md-4">
-        <div class="card h-100 feature-card">
+        <div class="card h-100">
             <div class="card-body text-center">
                 <i class="fas fa-tags fa-3x text-warning mb-3"></i>
                 <h5 class="card-title">Topic Analysis</h5>
@@ -196,33 +63,33 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0 section-header">
+                <h5 class="mb-0">
                     <i class="fas fa-chart-line me-2"></i>Quick Stats
                 </h5>
             </div>
             <div class="card-body">
                 <div class="row text-center">
                     <div class="col-md-3">
-                        <div class="stats-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                            <h3 id="total-stories">0</h3>
+                        <div class="stats-card">
+                            <h3 id="total-stories">-</h3>
                             <p class="mb-0">Total Stories</p>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="stats-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                            <h3 id="total-events">0</h3>
+                            <h3 id="total-events">-</h3>
                             <p class="mb-0">Events Tracked</p>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="stats-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-                            <h3 id="total-topics">0</h3>
+                            <h3 id="total-topics">-</h3>
                             <p class="mb-0">Topics</p>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="stats-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
-                            <h3 id="total-tags">0</h3>
+                            <h3 id="total-tags">-</h3>
                             <p class="mb-0">Tags</p>
                         </div>
                     </div>
@@ -236,24 +103,24 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0 section-header">
+                <h5 class="mb-0">
                     <i class="fas fa-info-circle me-2"></i>Getting Started
                 </h5>
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
-                        <h6 class="section-header"><i class="fas fa-upload me-2 text-primary"></i>Import Your Data</h6>
+                        <h6><i class="fas fa-upload me-2 text-primary"></i>Import Your Data</h6>
                         <p>Start by importing your CSV file with news stories. Our system supports flexible column mapping and automatic source detection.</p>
                         
-                        <h6 class="section-header"><i class="fas fa-cogs me-2 text-success"></i>Create Events</h6>
+                        <h6><i class="fas fa-cogs me-2 text-success"></i>Create Events</h6>
                         <p>Link stories to events and track how they develop over time. Create threads to organize related events.</p>
                     </div>
                     <div class="col-md-6">
-                        <h6 class="section-header"><i class="fas fa-tags me-2 text-warning"></i>Organize with Topics</h6>
+                        <h6><i class="fas fa-tags me-2 text-warning"></i>Organize with Topics</h6>
                         <p>Categorize your stories using topics and tags. This helps you find patterns and connections in your data.</p>
                         
-                        <h6 class="section-header"><i class="fas fa-chart-network me-2 text-info"></i>Analyze Relationships</h6>
+                        <h6><i class="fas fa-chart-network me-2 text-info"></i>Analyze Relationships</h6>
                         <p>Discover how stories connect through events, topics, and time. Build a comprehensive knowledge network.</p>
                     </div>
                 </div>
