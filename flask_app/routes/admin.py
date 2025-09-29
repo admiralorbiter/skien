@@ -419,3 +419,275 @@ def register_admin_routes(app):
         """Admin system metrics page - placeholder"""
         flash('System metrics coming soon!', 'info')
         return redirect(url_for('admin_dashboard'))
+    
+    # Story CRUD Operations
+    @app.route('/admin/stories/<int:story_id>')
+    @login_required
+    @admin_required
+    def admin_view_story(story_id):
+        """View story details"""
+        try:
+            from flask_app.models import Story, EventClaim, StoryTag, Tag
+            
+            story = Story.query.get_or_404(story_id)
+            
+            # Get related events
+            events = EventClaim.query.filter_by(story_primary_id=story_id).all()
+            
+            # Get tags
+            story_tags = StoryTag.query.filter_by(story_id=story_id).all()
+            tags = [st.tag for st in story_tags if st.tag]
+            
+            # Log admin action
+            AdminLog.log_action(
+                admin_user_id=current_user.id,
+                action='VIEW_STORY',
+                target_story_id=story.id,
+                details=f'Viewed story: {story.title[:50]}...',
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent')
+            )
+            
+            return render_template('admin/view_story.html', story=story, events=events, tags=tags)
+            
+        except Exception as e:
+            current_app.logger.error(f"Error viewing story {story_id}: {str(e)}")
+            flash('An error occurred while loading the story.', 'danger')
+            return redirect(url_for('admin_stories'))
+    
+    @app.route('/admin/stories/<int:story_id>/edit', methods=['GET', 'POST'])
+    @login_required
+    @admin_required
+    def admin_edit_story(story_id):
+        """Edit story"""
+        try:
+            from flask_app.models import Story, Tag, StoryTag
+            
+            story = Story.query.get_or_404(story_id)
+            
+            if request.method == 'POST':
+                # Get form data
+                title = request.form.get('title', '').strip()
+                source_name = request.form.get('source_name', '').strip()
+                author = request.form.get('author', '').strip()
+                published_at = request.form.get('published_at', '').strip()
+                summary = request.form.get('summary', '').strip()
+                raw_text = request.form.get('raw_text', '').strip()
+                tags_input = request.form.get('tags', '').strip()
+                
+                # Validate required fields
+                if not title:
+                    flash('Title is required.', 'danger')
+                    return render_template('admin/edit_story.html', story=story)
+                
+                if not source_name:
+                    flash('Source name is required.', 'danger')
+                    return render_template('admin/edit_story.html', story=story)
+                
+                # Parse published date
+                published_date = None
+                if published_at:
+                    try:
+                        published_date = datetime.strptime(published_at, '%Y-%m-%d').date()
+                    except ValueError:
+                        flash('Invalid date format. Use YYYY-MM-DD.', 'danger')
+                        return render_template('admin/edit_story.html', story=story)
+                
+                # Update story
+                story.title = title
+                story.source_name = source_name
+                story.author = author if author else None
+                story.published_at = published_date
+                story.summary = summary if summary else None
+                story.raw_text = raw_text if raw_text else None
+                
+                # Handle tags
+                if tags_input:
+                    tag_names = [tag.strip() for tag in tags_input.split(',') if tag.strip()]
+                    
+                    # Remove existing tags
+                    StoryTag.query.filter_by(story_id=story.id).delete()
+                    
+                    # Add new tags
+                    for tag_name in tag_names:
+                        # Get or create tag
+                        tag = Tag.query.filter_by(name=tag_name).first()
+                        if not tag:
+                            tag = Tag(name=tag_name)
+                            db.session.add(tag)
+                            db.session.flush()  # Get the ID
+                        
+                        # Create story-tag relationship
+                        story_tag = StoryTag(story_id=story.id, tag_id=tag.id)
+                        db.session.add(story_tag)
+                
+                try:
+                    db.session.commit()
+                    
+                    # Log admin action
+                    AdminLog.log_action(
+                        admin_user_id=current_user.id,
+                        action='UPDATE_STORY',
+                        target_story_id=story.id,
+                        details=f'Updated story: {story.title[:50]}...',
+                        ip_address=request.remote_addr,
+                        user_agent=request.headers.get('User-Agent')
+                    )
+                    
+                    flash('Story updated successfully!', 'success')
+                    return redirect(url_for('admin_view_story', story_id=story.id))
+                    
+                except Exception as e:
+                    db.session.rollback()
+                    current_app.logger.error(f"Error updating story {story_id}: {str(e)}")
+                    flash('An error occurred while updating the story.', 'danger')
+            
+            # Get current tags for display
+            story_tags = StoryTag.query.filter_by(story_id=story.id).all()
+            current_tags = [st.tag.name for st in story_tags if st.tag]
+            
+            return render_template('admin/edit_story.html', story=story, current_tags=current_tags)
+            
+        except Exception as e:
+            current_app.logger.error(f"Error editing story {story_id}: {str(e)}")
+            flash('An error occurred while loading the story for editing.', 'danger')
+            return redirect(url_for('admin_stories'))
+    
+    @app.route('/admin/stories/<int:story_id>/delete', methods=['POST'])
+    @login_required
+    @admin_required
+    def admin_delete_story(story_id):
+        """Delete story"""
+        try:
+            from flask_app.models import Story
+            
+            story = Story.query.get_or_404(story_id)
+            story_title = story.title
+            
+            # Log admin action before deletion
+            AdminLog.log_action(
+                admin_user_id=current_user.id,
+                action='DELETE_STORY',
+                target_story_id=story.id,
+                details=f'Deleted story: {story_title[:50]}...',
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent')
+            )
+            
+            # Delete story (cascade will handle related records)
+            db.session.delete(story)
+            db.session.commit()
+            
+            flash(f'Story "{story_title[:50]}..." deleted successfully!', 'success')
+            return redirect(url_for('admin_stories'))
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error deleting story {story_id}: {str(e)}")
+            flash('An error occurred while deleting the story.', 'danger')
+            return redirect(url_for('admin_stories'))
+    
+    @app.route('/admin/stories/create', methods=['GET', 'POST'])
+    @login_required
+    @admin_required
+    def admin_create_story():
+        """Create new story"""
+        try:
+            from flask_app.models import Story, Tag, StoryTag
+            
+            if request.method == 'POST':
+                # Get form data
+                url = request.form.get('url', '').strip()
+                title = request.form.get('title', '').strip()
+                source_name = request.form.get('source_name', '').strip()
+                author = request.form.get('author', '').strip()
+                published_at = request.form.get('published_at', '').strip()
+                summary = request.form.get('summary', '').strip()
+                raw_text = request.form.get('raw_text', '').strip()
+                tags_input = request.form.get('tags', '').strip()
+                
+                # Validate required fields
+                if not url:
+                    flash('URL is required.', 'danger')
+                    return render_template('admin/create_story.html')
+                
+                if not title:
+                    flash('Title is required.', 'danger')
+                    return render_template('admin/create_story.html')
+                
+                if not source_name:
+                    flash('Source name is required.', 'danger')
+                    return render_template('admin/create_story.html')
+                
+                # Check if URL already exists
+                existing_story = Story.query.filter_by(url=url).first()
+                if existing_story:
+                    flash('A story with this URL already exists.', 'danger')
+                    return render_template('admin/create_story.html')
+                
+                # Parse published date
+                published_date = None
+                if published_at:
+                    try:
+                        published_date = datetime.strptime(published_at, '%Y-%m-%d').date()
+                    except ValueError:
+                        flash('Invalid date format. Use YYYY-MM-DD.', 'danger')
+                        return render_template('admin/create_story.html')
+                
+                # Create story
+                story = Story(
+                    url=url,
+                    title=title,
+                    source_name=source_name,
+                    author=author if author else None,
+                    published_at=published_date,
+                    summary=summary if summary else None,
+                    raw_text=raw_text if raw_text else None
+                )
+                
+                db.session.add(story)
+                db.session.flush()  # Get the ID
+                
+                # Handle tags
+                if tags_input:
+                    tag_names = [tag.strip() for tag in tags_input.split(',') if tag.strip()]
+                    
+                    for tag_name in tag_names:
+                        # Get or create tag
+                        tag = Tag.query.filter_by(name=tag_name).first()
+                        if not tag:
+                            tag = Tag(name=tag_name)
+                            db.session.add(tag)
+                            db.session.flush()  # Get the ID
+                        
+                        # Create story-tag relationship
+                        story_tag = StoryTag(story_id=story.id, tag_id=tag.id)
+                        db.session.add(story_tag)
+                
+                try:
+                    db.session.commit()
+                    
+                    # Log admin action
+                    AdminLog.log_action(
+                        admin_user_id=current_user.id,
+                        action='CREATE_STORY',
+                        target_story_id=story.id,
+                        details=f'Created story: {story.title[:50]}...',
+                        ip_address=request.remote_addr,
+                        user_agent=request.headers.get('User-Agent')
+                    )
+                    
+                    flash('Story created successfully!', 'success')
+                    return redirect(url_for('admin_view_story', story_id=story.id))
+                    
+                except Exception as e:
+                    db.session.rollback()
+                    current_app.logger.error(f"Error creating story: {str(e)}")
+                    flash('An error occurred while creating the story.', 'danger')
+            
+            return render_template('admin/create_story.html')
+            
+        except Exception as e:
+            current_app.logger.error(f"Error in create story: {str(e)}")
+            flash('An error occurred while loading the create story page.', 'danger')
+            return redirect(url_for('admin_stories'))

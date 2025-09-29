@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Story - Admin - SKIEN{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="sidebar">
+            <div class="p-3">
+                <h6 class="text-muted text-uppercase fw-bold mb-3">Admin Panel</h6>
+                <nav class="nav flex-column">
+                    <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                    <a class="nav-link" href="{{ url_for('admin_users') }}">
+                        <i class="fas fa-users me-2"></i>Users
+                    </a>
+                    <a class="nav-link active" href="{{ url_for('admin_stories') }}">
+                        <i class="fas fa-newspaper me-2"></i>Stories
+                    </a>
+                    <a class="nav-link" href="{{ url_for('admin_events') }}">
+                        <i class="fas fa-calendar-alt me-2"></i>Events
+                    </a>
+                    <a class="nav-link" href="{{ url_for('admin_topics') }}">
+                        <i class="fas fa-tags me-2"></i>Topics
+                    </a>
+                    <a class="nav-link" href="{{ url_for('admin_logs') }}">
+                        <i class="fas fa-file-alt me-2"></i>System Logs
+                    </a>
+                    <a class="nav-link" href="{{ url_for('admin_metrics') }}">
+                        <i class="fas fa-chart-bar me-2"></i>Metrics
+                    </a>
+                </nav>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-edit me-2"></i>Edit Story</h2>
+            <div>
+                <a href="{{ url_for('admin_view_story', story_id=story.id) }}" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-eye me-2"></i>View Story
+                </a>
+                <a href="{{ url_for('admin_stories') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Stories
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Story Information</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="title" name="title" 
+                                       value="{{ story.title }}" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="source_name" class="form-label">Source Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="source_name" name="source_name" 
+                                       value="{{ story.source_name }}" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="author" class="form-label">Author</label>
+                                <input type="text" class="form-control" id="author" name="author" 
+                                       value="{{ story.author or '' }}">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="published_at" class="form-label">Published Date</label>
+                                <input type="date" class="form-control" id="published_at" name="published_at" 
+                                       value="{{ story.published_at.strftime('%Y-%m-%d') if story.published_at else '' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="url" class="form-label">URL</label>
+                                <input type="url" class="form-control" id="url" name="url" 
+                                       value="{{ story.url }}" readonly>
+                                <div class="form-text">URL cannot be changed after creation</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="tags" class="form-label">Tags</label>
+                                <input type="text" class="form-control" id="tags" name="tags" 
+                                       value="{{ current_tags|join(', ') if current_tags else '' }}"
+                                       placeholder="Enter tags separated by commas">
+                                <div class="form-text">Separate multiple tags with commas</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Created</label>
+                                <input type="text" class="form-control" 
+                                       value="{{ story.created_at.strftime('%B %d, %Y at %I:%M %p') }}" readonly>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Last Updated</label>
+                                <input type="text" class="form-control" 
+                                       value="{{ story.updated_at.strftime('%B %d, %Y at %I:%M %p') if story.updated_at else 'Never' }}" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="summary" class="form-label">Summary</label>
+                        <textarea class="form-control" id="summary" name="summary" rows="3" 
+                                  placeholder="Brief summary of the story">{{ story.summary or '' }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="raw_text" class="form-label">Raw Text</label>
+                        <textarea class="form-control" id="raw_text" name="raw_text" rows="8" 
+                                  placeholder="Full text content of the story">{{ story.raw_text or '' }}</textarea>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin_view_story', story_id=story.id) }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Update Story
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Help -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Editing Tips</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="fas fa-info-circle text-info me-2"></i>
+                        <strong>Title:</strong> Keep it concise and descriptive
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-info-circle text-info me-2"></i>
+                        <strong>Source:</strong> Use consistent naming (e.g., "CNN", "BBC News")
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-info-circle text-info me-2"></i>
+                        <strong>Tags:</strong> Use relevant keywords for better organization
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-info-circle text-info me-2"></i>
+                        <strong>Summary:</strong> Brief overview of the story's main points
+                    </li>
+                    <li>
+                        <i class="fas fa-info-circle text-info me-2"></i>
+                        <strong>Raw Text:</strong> Full article content for analysis
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Story Statistics -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Story Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ current_tags|length }}</h4>
+                        <small class="text-muted">Tags</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">0</h4>
+                        <small class="text-muted">Events</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-resize textareas
+document.addEventListener('DOMContentLoaded', function() {
+    const textareas = document.querySelectorAll('textarea');
+    textareas.forEach(function(textarea) {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+    });
+});
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const title = document.getElementById('title').value.trim();
+    const sourceName = document.getElementById('source_name').value.trim();
+    
+    if (!title) {
+        e.preventDefault();
+        alert('Title is required.');
+        document.getElementById('title').focus();
+        return;
+    }
+    
+    if (!sourceName) {
+        e.preventDefault();
+        alert('Source name is required.');
+        document.getElementById('source_name').focus();
+        return;
+    }
+});
+</script>
+{% endblock %}

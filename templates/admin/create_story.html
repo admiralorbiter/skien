@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block title %}Create Story - Admin - SKIEN{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="sidebar">
+            <div class="p-3">
+                <h6 class="text-muted text-uppercase fw-bold mb-3">Admin Panel</h6>
+                <nav class="nav flex-column">
+                    <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                    <a class="nav-link" href="{{ url_for('admin_users') }}">
+                        <i class="fas fa-users me-2"></i>Users
+                    </a>
+                    <a class="nav-link active" href="{{ url_for('admin_stories') }}">
+                        <i class="fas fa-newspaper me-2"></i>Stories
+                    </a>
+                    <a class="nav-link" href="{{ url_for('admin_events') }}">
+                        <i class="fas fa-calendar-alt me-2"></i>Events
+                    </a>
+                    <a class="nav-link" href="{{ url_for('admin_topics') }}">
+                        <i class="fas fa-tags me-2"></i>Topics
+                    </a>
+                    <a class="nav-link" href="{{ url_for('admin_logs') }}">
+                        <i class="fas fa-file-alt me-2"></i>System Logs
+                    </a>
+                    <a class="nav-link" href="{{ url_for('admin_metrics') }}">
+                        <i class="fas fa-chart-bar me-2"></i>Metrics
+                    </a>
+                </nav>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-plus me-2"></i>Create New Story</h2>
+            <div>
+                <a href="{{ url_for('admin_stories') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Stories
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Story Information</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="url" class="form-label">URL <span class="text-danger">*</span></label>
+                                <input type="url" class="form-control" id="url" name="url" 
+                                       placeholder="https://example.com/article" required>
+                                <div class="form-text">The original URL of the story</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="title" name="title" 
+                                       placeholder="Enter story title" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="source_name" class="form-label">Source Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="source_name" name="source_name" 
+                                       placeholder="e.g., CNN, BBC News, Reuters" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="author" class="form-label">Author</label>
+                                <input type="text" class="form-control" id="author" name="author" 
+                                       placeholder="Author name">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="published_at" class="form-label">Published Date</label>
+                                <input type="date" class="form-control" id="published_at" name="published_at">
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="tags" class="form-label">Tags</label>
+                                <input type="text" class="form-control" id="tags" name="tags" 
+                                       placeholder="politics, economy, technology">
+                                <div class="form-text">Separate multiple tags with commas</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Import Options</label>
+                                <div class="d-grid gap-2">
+                                    <button type="button" class="btn btn-outline-primary" onclick="importFromURL()">
+                                        <i class="fas fa-download me-2"></i>Import from URL
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success" onclick="importFromCSV()">
+                                        <i class="fas fa-file-csv me-2"></i>Import from CSV
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="summary" class="form-label">Summary</label>
+                        <textarea class="form-control" id="summary" name="summary" rows="3" 
+                                  placeholder="Brief summary of the story's main points"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="raw_text" class="form-label">Raw Text</label>
+                        <textarea class="form-control" id="raw_text" name="raw_text" rows="8" 
+                                  placeholder="Full text content of the story"></textarea>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin_stories') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Create Story
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Help -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Creating Stories</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="fas fa-info-circle text-info me-2"></i>
+                        <strong>URL:</strong> Must be unique and accessible
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-info-circle text-info me-2"></i>
+                        <strong>Title:</strong> Keep it concise and descriptive
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-info-circle text-info me-2"></i>
+                        <strong>Source:</strong> Use consistent naming conventions
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-info-circle text-info me-2"></i>
+                        <strong>Tags:</strong> Help organize and find stories
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-info-circle text-info me-2"></i>
+                        <strong>Summary:</strong> Brief overview of main points
+                    </li>
+                    <li>
+                        <i class="fas fa-info-circle text-info me-2"></i>
+                        <strong>Raw Text:</strong> Full content for analysis
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Quick Import -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Quick Import</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">For bulk imports, use the import system:</p>
+                <a href="{{ url_for('import.index') }}" class="btn btn-primary w-100">
+                    <i class="fas fa-upload me-2"></i>Import Stories
+                </a>
+            </div>
+        </div>
+        
+        <!-- Tips -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Tips</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="fas fa-lightbulb text-warning me-2"></i>
+                        Use consistent source names
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-lightbulb text-warning me-2"></i>
+                        Add relevant tags for better organization
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-lightbulb text-warning me-2"></i>
+                        Include a summary for quick reference
+                    </li>
+                    <li>
+                        <i class="fas fa-lightbulb text-warning me-2"></i>
+                        Raw text helps with analysis and search
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-resize textareas
+document.addEventListener('DOMContentLoaded', function() {
+    const textareas = document.querySelectorAll('textarea');
+    textareas.forEach(function(textarea) {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+    });
+});
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const url = document.getElementById('url').value.trim();
+    const title = document.getElementById('title').value.trim();
+    const sourceName = document.getElementById('source_name').value.trim();
+    
+    if (!url) {
+        e.preventDefault();
+        alert('URL is required.');
+        document.getElementById('url').focus();
+        return;
+    }
+    
+    if (!title) {
+        e.preventDefault();
+        alert('Title is required.');
+        document.getElementById('title').focus();
+        return;
+    }
+    
+    if (!sourceName) {
+        e.preventDefault();
+        alert('Source name is required.');
+        document.getElementById('source_name').focus();
+        return;
+    }
+    
+    // Basic URL validation
+    try {
+        new URL(url);
+    } catch (error) {
+        e.preventDefault();
+        alert('Please enter a valid URL.');
+        document.getElementById('url').focus();
+        return;
+    }
+});
+
+// Import functions (placeholders)
+function importFromURL() {
+    alert('URL import feature coming soon!');
+}
+
+function importFromCSV() {
+    window.location.href = "{{ url_for('import.index') }}";
+}
+
+// Auto-fill source name from URL
+document.getElementById('url').addEventListener('blur', function() {
+    const url = this.value.trim();
+    const sourceNameField = document.getElementById('source_name');
+    
+    if (url && !sourceNameField.value) {
+        try {
+            const urlObj = new URL(url);
+            const hostname = urlObj.hostname;
+            
+            // Extract domain name
+            let sourceName = hostname.replace('www.', '');
+            sourceName = sourceName.split('.')[0];
+            sourceName = sourceName.charAt(0).toUpperCase() + sourceName.slice(1);
+            
+            sourceNameField.value = sourceName;
+        } catch (error) {
+            // Invalid URL, do nothing
+        }
+    }
+});
+</script>
+{% endblock %}

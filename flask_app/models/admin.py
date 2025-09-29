@@ -12,6 +12,9 @@ class AdminLog(BaseModel):
     admin_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     action = db.Column(db.String(100), nullable=False)  # CREATE_USER, UPDATE_USER, DELETE_USER, etc.
     target_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    target_story_id = db.Column(db.Integer, db.ForeignKey('stories.id'), nullable=True)
+    target_event_id = db.Column(db.Integer, db.ForeignKey('event_claims.id'), nullable=True)
+    target_topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=True)
     details = db.Column(db.Text, nullable=True)  # JSON string with action details
     ip_address = db.Column(db.String(45), nullable=True)
     user_agent = db.Column(db.Text, nullable=True)
@@ -20,7 +23,8 @@ class AdminLog(BaseModel):
         return f'<AdminLog {self.action} by user {self.admin_user_id}>'
     
     @staticmethod
-    def log_action(admin_user_id, action, target_user_id=None, details=None, 
+    def log_action(admin_user_id, action, target_user_id=None, target_story_id=None, 
+                   target_event_id=None, target_topic_id=None, details=None, 
                    ip_address=None, user_agent=None):
         """Log an admin action"""
         try:
@@ -28,6 +32,9 @@ class AdminLog(BaseModel):
                 admin_user_id=admin_user_id,
                 action=action,
                 target_user_id=target_user_id,
+                target_story_id=target_story_id,
+                target_event_id=target_event_id,
+                target_topic_id=target_topic_id,
                 details=details,
                 ip_address=ip_address,
                 user_agent=user_agent
