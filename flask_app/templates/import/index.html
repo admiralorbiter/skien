@@ -165,6 +165,27 @@
                 </div>
                 <div class="row mt-3">
                     <div class="col-md-4">
+                        <label for="topicsColumn" class="form-label">Topics Column (optional)</label>
+                        <select class="form-select" id="topicsColumn" name="topics_column">
+                            <option value="">Select column...</option>
+                        </select>
+                        <small class="form-text text-muted">Separate multiple topics with semicolons</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="threadColumn" class="form-label">Thread Column (optional)</label>
+                        <select class="form-select" id="threadColumn" name="thread_column">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="eventClaimColumn" class="form-label">Event Claim Column (optional)</label>
+                        <select class="form-select" id="eventClaimColumn" name="event_claim_column">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-4">
                         <label for="sourceColumn" class="form-label">Source Column (optional)</label>
                         <select class="form-select" id="sourceColumn" name="source_column">
                             <option value="">Select column...</option>
@@ -255,6 +276,7 @@
 <script>
 let currentStep = 1;
 let uploadedFile = null;
+let uploadedFilename = null;
 let columnMapping = {};
 let previewData = null;
 
@@ -308,6 +330,7 @@ function processFile(file) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            uploadedFilename = data.filename;
             populateColumnMapping(data.columns);
             goToStep(2);
         } else {
@@ -321,7 +344,7 @@ function processFile(file) {
 }
 
 function populateColumnMapping(columns) {
-    const selects = ['titleColumn', 'urlColumn', 'dateColumn', 'sourceColumn', 'authorColumn', 'summaryColumn'];
+    const selects = ['titleColumn', 'urlColumn', 'dateColumn', 'topicsColumn', 'threadColumn', 'eventClaimColumn', 'sourceColumn', 'authorColumn', 'summaryColumn'];
     
     selects.forEach(selectId => {
         const select = document.getElementById(selectId);
@@ -341,6 +364,9 @@ function previewData() {
         title: document.getElementById('titleColumn').value,
         url: document.getElementById('urlColumn').value,
         date: document.getElementById('dateColumn').value,
+        topics: document.getElementById('topicsColumn').value,
+        thread: document.getElementById('threadColumn').value,
+        event_claim: document.getElementById('eventClaimColumn').value,
         source: document.getElementById('sourceColumn').value,
         author: document.getElementById('authorColumn').value,
         summary: document.getElementById('summaryColumn').value
@@ -351,19 +377,33 @@ function previewData() {
         return;
     }
     
+    // Clean up empty values and undefined columns
+    Object.keys(mapping).forEach(key => {
+        if (!mapping[key] || mapping[key] === '' || mapping[key] === 'Select column...') {
+            delete mapping[key];
+        }
+    });
+    
+    console.log('Column mapping being sent:', mapping);
+    
     columnMapping = mapping;
+    
+    const requestData = {
+        filename: uploadedFilename,
+        column_mapping: mapping
+    };
     
     fetch('{{ url_for("import.preview_import") }}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(mapping)
+        body: JSON.stringify(requestData)
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            displayPreview(data.preview);
+            displayPreview(data);
             goToStep(3);
         } else {
             alert('Error previewing data: ' + data.error);
@@ -390,24 +430,31 @@ function displayPreview(data) {
                         <th>Title</th>
                         <th>URL</th>
                         <th>Date</th>
-                        <th>Source</th>
+                        <th>Topics</th>
+                        <th>Thread</th>
+                        <th>Event Claim</th>
                         <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
     `;
     
-    data.preview_rows.forEach(row => {
-        const statusClass = row.valid ? 'validation-success' : 'validation-error';
-        const statusIcon = row.valid ? 'fa-check' : 'fa-times';
-        const statusText = row.valid ? 'Valid' : row.error;
+    data.preview_rows.forEach((row, index) => {
+        // Check if this row has validation errors
+        const rowErrors = data.validation_results.errors.filter(error => error.row === index + 1);
+        const isValid = rowErrors.length === 0;
+        const statusClass = isValid ? 'validation-success' : 'validation-error';
+        const statusIcon = isValid ? 'fa-check' : 'fa-times';
+        const statusText = isValid ? 'Valid' : rowErrors[0]?.error || 'Invalid';
         
         html += `
             <tr>
                 <td>${row.title || ''}</td>
                 <td><a href="${row.url || '#'}" target="_blank">${row.url || ''}</a></td>
                 <td>${row.date || ''}</td>
-                <td>${row.source || ''}</td>
+                <td>${row.topics || ''}</td>
+                <td>${row.thread || ''}</td>
+                <td>${row.event_claim || ''}</td>
                 <td><i class="fas ${statusIcon} me-1"></i><span class="${statusClass}">${statusText}</span></td>
             </tr>
         `;
@@ -423,12 +470,17 @@ function displayPreview(data) {
 }
 
 function importData() {
+    const data = {
+        filename: uploadedFilename,
+        column_mapping: columnMapping
+    };
+    
     fetch('{{ url_for("import.process_import") }}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(columnMapping)
+        body: JSON.stringify(data)
     })
     .then(response => response.json())
     .then(data => {
@@ -447,17 +499,17 @@ function displayImportResults(data) {
     let html = `
         <div class="alert alert-${data.success ? 'success' : 'danger'}">
             <i class="fas fa-${data.success ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
-            ${data.message}
+            Import ${data.success ? 'completed successfully' : 'failed'}
         </div>
     `;
     
-    if (data.success && data.stats) {
+    if (data.success && data.results) {
         html += `
             <div class="row">
                 <div class="col-md-3">
                     <div class="card text-center">
                         <div class="card-body">
-                            <h4 class="text-success">${data.stats.imported}</h4>
+                            <h4 class="text-success">${data.results.success}</h4>
                             <p class="text-muted">Imported</p>
                         </div>
                     </div>
@@ -465,7 +517,7 @@ function displayImportResults(data) {
                 <div class="col-md-3">
                     <div class="card text-center">
                         <div class="card-body">
-                            <h4 class="text-warning">${data.stats.duplicates}</h4>
+                            <h4 class="text-warning">${data.results.duplicates}</h4>
                             <p class="text-muted">Duplicates</p>
                         </div>
                     </div>
@@ -473,7 +525,7 @@ function displayImportResults(data) {
                 <div class="col-md-3">
                     <div class="card text-center">
                         <div class="card-body">
-                            <h4 class="text-danger">${data.stats.errors}</h4>
+                            <h4 class="text-danger">${data.results.errors}</h4>
                             <p class="text-muted">Errors</p>
                         </div>
                     </div>
@@ -481,7 +533,7 @@ function displayImportResults(data) {
                 <div class="col-md-3">
                     <div class="card text-center">
                         <div class="card-body">
-                            <h4 class="text-info">${data.stats.total}</h4>
+                            <h4 class="text-info">${data.results.success + data.results.duplicates + data.results.errors}</h4>
                             <p class="text-muted">Total</p>
                         </div>
                     </div>
@@ -517,6 +569,7 @@ function goToStep(step) {
 function startOver() {
     currentStep = 1;
     uploadedFile = null;
+    uploadedFilename = null;
     columnMapping = {};
     previewData = null;
     

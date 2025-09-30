@@ -168,6 +168,27 @@
                 </div>
                 <div class="row mt-3">
                     <div class="col-md-4">
+                        <label for="topicsColumn" class="form-label">Topics Column (optional)</label>
+                        <select class="form-select" id="topicsColumn" name="topics_column">
+                            <option value="">Select column...</option>
+                        </select>
+                        <small class="form-text text-muted">Separate multiple topics with semicolons</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="threadColumn" class="form-label">Thread Column (optional)</label>
+                        <select class="form-select" id="threadColumn" name="thread_column">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="eventClaimColumn" class="form-label">Event Claim Column (optional)</label>
+                        <select class="form-select" id="eventClaimColumn" name="event_claim_column">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-4">
                         <label for="sourceColumn" class="form-label">Source Column (optional)</label>
                         <select class="form-select" id="sourceColumn" name="source_column">
                             <option value="">Select column...</option>
@@ -418,7 +439,7 @@ function processFile(file) {
 }
 
 function populateColumnMapping(columns) {
-    const selects = ['titleColumn', 'urlColumn', 'dateColumn', 'sourceColumn', 'authorColumn', 'summaryColumn'];
+    const selects = ['titleColumn', 'urlColumn', 'dateColumn', 'topicsColumn', 'threadColumn', 'eventClaimColumn', 'sourceColumn', 'authorColumn', 'summaryColumn'];
     
     selects.forEach(selectId => {
         const select = document.getElementById(selectId);
@@ -438,6 +459,9 @@ function previewData() {
         title: document.getElementById('titleColumn').value,
         url: document.getElementById('urlColumn').value,
         date: document.getElementById('dateColumn').value,
+        topics: document.getElementById('topicsColumn').value,
+        thread: document.getElementById('threadColumn').value,
+        event_claim: document.getElementById('eventClaimColumn').value,
         source: document.getElementById('sourceColumn').value,
         author: document.getElementById('authorColumn').value,
         summary: document.getElementById('summaryColumn').value
@@ -447,6 +471,15 @@ function previewData() {
         alert('Please select at least Title and URL columns.');
         return;
     }
+    
+    // Clean up empty values and undefined columns
+    Object.keys(mapping).forEach(key => {
+        if (!mapping[key] || mapping[key] === '' || mapping[key] === 'Select column...') {
+            delete mapping[key];
+        }
+    });
+    
+    console.log('Column mapping being sent:', mapping);
     
     columnMapping = mapping;
     
@@ -511,7 +544,9 @@ function displayPreview(data) {
                         <th>Title</th>
                         <th>URL</th>
                         <th>Date</th>
-                        <th>Source</th>
+                        <th>Topics</th>
+                        <th>Thread</th>
+                        <th>Event Claim</th>
                         <th>Status</th>
                     </tr>
                 </thead>
@@ -535,7 +570,9 @@ function displayPreview(data) {
                 <td>${row.title || ''}</td>
                 <td><a href="${row.url || '#'}" target="_blank">${row.url || ''}</a></td>
                 <td>${row.date || ''}</td>
-                <td>${row.source || ''}</td>
+                <td>${row.topics || ''}</td>
+                <td>${row.thread || ''}</td>
+                <td>${row.event_claim || ''}</td>
                 <td><i class="fas ${statusIcon} me-1"></i><span class="${statusClass}">${statusText}</span></td>
             </tr>
         `;

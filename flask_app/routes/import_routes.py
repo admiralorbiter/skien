@@ -5,10 +5,12 @@ from werkzeug.utils import secure_filename
 import pandas as pd
 import os
 from datetime import datetime
-from flask_app.models import db, Story, Topic, Tag
+from flask_app.models import db, Story, Topic, Tag, Thread, EventClaim
 from flask_app.models.story import Story
 from flask_app.models.topic import Topic
 from flask_app.models.tag import Tag
+from flask_app.models.thread import Thread
+from flask_app.models.event_claim import EventClaim
 import logging
 
 logger = logging.getLogger(__name__)
@@ -65,12 +67,14 @@ def upload_file():
             
             # Get sample data for preview
             sample_data = df.head(5).to_dict('records')
+            # Clean the sample data for JSON serialization
+            cleaned_sample_data = clean_json_data(sample_data)
             
             return jsonify({
                 'success': True,
                 'filename': filename,
                 'columns': columns,
-                'sample_data': sample_data,
+                'sample_data': cleaned_sample_data,
                 'total_rows': len(df)
             })
             
@@ -100,30 +104,77 @@ def preview_import():
         # Read CSV
         df = pd.read_csv(filepath)
         
+        # Log the column mapping for debugging
+        logger.info(f"Column mapping received: {column_mapping}")
+        logger.info(f"Available columns in CSV: {list(df.columns)}")
+        logger.info(f"Column mapping type: {type(column_mapping)}")
+        logger.info(f"Column mapping keys: {list(column_mapping.keys())}")
+        
+        # Validate that required columns exist in the CSV (only check columns that are actually mapped)
+        missing_columns = []
+        for target_field, source_column in column_mapping.items():
+            if source_column and source_column not in df.columns:
+                missing_columns.append(source_column)
+        
+        if missing_columns:
+            return jsonify({'error': f'Columns not found in CSV: {missing_columns}'}), 400
+        
         # Map columns
         mapped_data = []
         for _, row in df.iterrows():
             mapped_row = {}
             for target_field, source_column in column_mapping.items():
                 if source_column and source_column in df.columns:
-                    mapped_row[target_field] = row[source_column]
+                    value = row[source_column]
+                    # Handle pandas NaN values and convert to None
+                    if pd.isna(value) or value == '' or str(value).strip() == '':
+                        mapped_row[target_field] = None
+                    else:
+                        mapped_row[target_field] = str(value).strip() if value is not None else None
                 else:
-                    mapped_row[target_field] = None
+                    # Only set to None if the field was actually mapped (not if it was omitted)
+                    if source_column:  # source_column exists but not in CSV
+                        mapped_row[target_field] = None
+                    # If source_column is empty/None, don't add this field at all
             mapped_data.append(mapped_row)
         
         # Validate data
         validation_results = validate_story_data(mapped_data)
         
+        # Clean data for JSON serialization
+        cleaned_mapped_data = clean_json_data(mapped_data[:10])  # First 10 rows for preview
+        cleaned_validation_results = clean_json_data(validation_results)
+        
         return jsonify({
             'success': True,
-            'mapped_data': mapped_data[:10],  # First 10 rows for preview
-            'validation_results': validation_results,
+            'mapped_data': cleaned_mapped_data,
+            'preview_rows': cleaned_mapped_data,
+            'validation_results': cleaned_validation_results,
             'total_rows': len(mapped_data)
         })
         
     except Exception as e:
         logger.error(f"Error previewing import: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return jsonify({'error': f'Preview failed: {str(e)}'}), 500
+
+def clean_json_data(data):
+    """Clean data to ensure it's JSON serializable"""
+    import numpy as np
+    
+    if isinstance(data, dict):
+        return {key: clean_json_data(value) for key, value in data.items()}
+    elif isinstance(data, list):
+        return [clean_json_data(item) for item in data]
+    elif isinstance(data, (np.integer, np.floating)):
+        return data.item() if not np.isnan(data) else None
+    elif isinstance(data, np.ndarray):
+        return data.tolist()
+    elif pd.isna(data):
+        return None
+    else:
+        return data
 
 @import_bp.route('/process', methods=['POST'])
 def process_import():
@@ -157,7 +208,21 @@ def process_import():
                 story_data = {}
                 for target_field, source_column in column_mapping.items():
                     if source_column and source_column in df.columns:
-                        story_data[target_field] = row[source_column]
+                        value = row[source_column]
+                        # Handle pandas NaN values and convert to None
+                        if pd.isna(value) or value == '' or str(value).strip() == '':
+                            story_data[target_field] = None
+                        else:
+                            story_data[target_field] = str(value).strip() if value is not None else None
+                    else:
+                        # Only set to None if the field was actually mapped (not if it was omitted)
+                        if source_column:  # source_column exists but not in CSV
+                            story_data[target_field] = None
+                        # If source_column is empty/None, don't add this field at all
+                
+                # Handle date field mapping (convert 'date' to 'published_at')
+                if 'date' in story_data:
+                    story_data['published_at'] = story_data['date']
                 
                 # Create story
                 story = create_story_from_data(story_data)
@@ -180,9 +245,12 @@ def process_import():
         except:
             pass
         
+        # Clean results for JSON serialization
+        cleaned_results = clean_json_data(results)
+        
         return jsonify({
             'success': True,
-            'results': results
+            'results': cleaned_results
         })
         
     except Exception as e:
@@ -243,7 +311,7 @@ def validate_story_data(data_list):
     return validation_results
 
 def create_story_from_data(data):
-    """Create a Story object from mapped data"""
+    """Create a Story object from mapped data with topics, threads, and events"""
     try:
         # Check for duplicates
         url = data.get('url')
@@ -282,6 +350,37 @@ def create_story_from_data(data):
         if not validation_errors:
             try:
                 db.session.add(story)
+                db.session.flush()  # Flush to get story ID
+                
+                # Handle topics
+                if data.get('topics'):
+                    topics = parse_topics(data['topics'])
+                    for topic_name in topics:
+                        topic = get_or_create_topic(topic_name.strip())
+                        if topic and topic not in story.topics:
+                            story.topics.append(topic)
+                            logger.info(f"Added topic '{topic_name}' to story '{data.get('title', 'Unknown')}'")
+                
+                # Handle thread
+                if data.get('thread'):
+                    thread = get_or_create_thread(data['thread'].strip(), story.topics.first() if story.topics.count() > 0 else None)
+                    if thread and thread not in story.threads:
+                        story.threads.append(thread)
+                        logger.info(f"Added thread '{data['thread']}' to story '{data.get('title', 'Unknown')}'")
+                
+                # Handle event claim
+                if data.get('event_claim'):
+                    event = create_event_claim(
+                        data['event_claim'],
+                        published_at or datetime.now().date(),
+                        story.topics.first() if story.topics.count() > 0 else None,
+                        story.threads.first() if story.threads.count() > 0 else None
+                    )
+                    if event:
+                        # Link event to story
+                        from flask_app.models.event_story_link import EventStoryLink
+                        EventStoryLink.create_link(event, story)
+                
                 db.session.commit()
                 return story
             except Exception as e:
@@ -389,3 +488,111 @@ def extract_source_from_url(url):
     except Exception as e:
         logger.error(f"Error extracting source from URL {url}: {str(e)}")
         return 'Unknown Source'
+
+def parse_topics(topics_string):
+    """Parse semicolon-separated topics string into list"""
+    if not topics_string:
+        return []
+    
+    # Split by semicolon and clean up
+    topics = [topic.strip() for topic in topics_string.split(';')]
+    # Remove empty strings
+    topics = [topic for topic in topics if topic]
+    return topics
+
+def get_or_create_topic(topic_name):
+    """Get existing topic or create new one"""
+    try:
+        # Try to find existing topic
+        topic = Topic.find_by_name(topic_name)
+        if topic:
+            logger.info(f"Using existing topic: {topic_name}")
+            return topic
+        
+        # Create new topic
+        topic = Topic(name=topic_name)
+        validation_errors = topic.validate()
+        if not validation_errors:
+            db.session.add(topic)
+            db.session.flush()  # Flush to get ID
+            logger.info(f"Created new topic: {topic_name}")
+            return topic
+        else:
+            logger.error(f"Topic validation failed for '{topic_name}': {validation_errors}")
+            return None
+            
+    except Exception as e:
+        logger.error(f"Error creating topic '{topic_name}': {str(e)}")
+        return None
+
+def get_or_create_thread(thread_name, topic=None):
+    """Get existing thread or create new one, ensuring topic relationship is updated"""
+    try:
+        # Try to find existing thread
+        thread = Thread.query.filter_by(name=thread_name).first()
+        if thread:
+            # Update topic relationship if topic is provided and not already associated
+            if topic and topic not in thread.topics:
+                thread.topics.append(topic)
+                db.session.commit()
+                logger.info(f"Updated existing thread '{thread_name}' with topic '{topic.name}'")
+            return thread
+        
+        # Create new thread (requires a topic)
+        if not topic:
+            # Create a default topic if none provided
+            topic = get_or_create_topic("General")
+            if not topic:
+                return None
+        
+        thread = Thread(
+            name=thread_name,
+            start_date=datetime.now().date()
+        )
+        
+        validation_errors = thread.validate()
+        if not validation_errors:
+            db.session.add(thread)
+            db.session.flush()  # Flush to get ID
+            
+            # Add topic to thread via many-to-many relationship
+            thread.topics.append(topic)
+            db.session.commit()
+            logger.info(f"Created new thread: {thread_name}")
+            return thread
+        else:
+            logger.error(f"Thread validation failed for '{thread_name}': {validation_errors}")
+            return None
+            
+    except Exception as e:
+        logger.error(f"Error creating thread '{thread_name}': {str(e)}")
+        return None
+
+def create_event_claim(claim_text, event_date, topic=None, thread=None):
+    """Create an event claim"""
+    try:
+        # Create a default topic if none provided
+        if not topic:
+            topic = get_or_create_topic("General")
+            if not topic:
+                return None
+        
+        event = EventClaim(
+            claim_text=claim_text,
+            event_date=event_date,
+            topic_id=topic.id,
+            thread_id=thread.id if thread else None
+        )
+        
+        validation_errors = event.validate()
+        if not validation_errors:
+            db.session.add(event)
+            db.session.flush()  # Flush to get ID
+            return event
+        else:
+            logger.error(f"Event validation failed for '{claim_text}': {validation_errors}")
+            return None
+            
+    except Exception as e:
+        logger.error(f"Error creating event claim '{claim_text}': {str(e)}")
+        return None
