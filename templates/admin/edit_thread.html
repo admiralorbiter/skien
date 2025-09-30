@@ -89,7 +89,14 @@
                 <h1 class="h3 mb-2">Edit Thread: {{ thread.name }}</h1>
                 <p class="mb-0 opacity-75">Update thread details and settings</p>
                 <small class="opacity-75">
-                    <i class="fas fa-tag me-1"></i>Topic: {{ thread.topic.name }}
+                    <i class="fas fa-tag me-1"></i>Topics: 
+                    {% if thread.topics %}
+                        {% for topic in thread.topics %}
+                            {{ topic.name }}{% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        None assigned
+                    {% endif %}
                     • <i class="fas fa-plus-circle me-1"></i>Created {{ thread.created_at.strftime('%B %d, %Y') if thread.created_at is not string else thread.created_at[:10] }}
                 </small>
             </div>
@@ -97,7 +104,7 @@
                 <a href="{{ url_for('admin_view_thread', thread_id=thread.id) }}" class="btn btn-outline-light me-2">
                     <i class="fas fa-eye me-1"></i>View Thread
                 </a>
-                <a href="{{ url_for('admin_threads', topic_id=thread.topic_id) }}" class="btn btn-outline-light">
+                <a href="{{ url_for('admin_threads') }}" class="btn btn-outline-light">
                     <i class="fas fa-arrow-left me-1"></i>Back to Threads
                 </a>
             </div>
@@ -120,8 +127,16 @@
                             <span class="info-value">#{{ thread.id }}</span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label">Topic:</span>
-                            <span class="info-value">{{ thread.topic.name }}</span>
+                            <span class="info-label">Topics:</span>
+                            <span class="info-value">
+                                {% if thread.topics %}
+                                    {% for topic in thread.topics %}
+                                        {{ topic.name }}{% if not loop.last %}, {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    None assigned
+                                {% endif %}
+                            </span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">Events:</span>
@@ -175,6 +190,19 @@
                             <textarea class="form-control" id="description" name="description" rows="4"
                                       placeholder="Describe what this thread is about...">{{ request.form.get('description', thread.description or '') }}</textarea>
                             <div class="form-text">Provide context about this thread's purpose and scope</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="topic_ids" class="form-label">Topics</label>
+                            <select class="form-select" id="topic_ids" name="topic_ids" multiple>
+                                {% for topic in all_topics %}
+                                <option value="{{ topic.id }}" 
+                                        {% if topic in thread.topics %}selected{% endif %}>
+                                    {{ topic.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Select one or more topics for this thread (optional - can be added later)</div>
                         </div>
                         
                         <div class="mb-3">

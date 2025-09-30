@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Create Thread - {{ topic.name }} - Admin - SKIEN{% endblock %}
+{% block title %}Create Thread{% if topic %} - {{ topic.name }}{% endif %} - Admin - SKIEN{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
@@ -59,13 +59,21 @@
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <div class="d-flex align-items-center mb-2">
+                    {% if topic %}
                     <div class="topic-color-display" style="background-color: {{ topic.color or '#6c757d' }};"></div>
+                    {% endif %}
                     <h1 class="h3 mb-0">Create New Thread</h1>
                 </div>
-                <p class="mb-0 opacity-75">Add a new thread to organize events chronologically in {{ topic.name }}</p>
+                <p class="mb-0 opacity-75">
+                    {% if topic %}
+                    Add a new thread to organize events chronologically in {{ topic.name }}
+                    {% else %}
+                    Create a new thread that can span multiple topics and organize events chronologically
+                    {% endif %}
+                </p>
             </div>
             <div>
-                <a href="{{ url_for('admin_threads', topic_id=topic.id) }}" class="btn btn-outline-light">
+                <a href="{% if topic %}{{ url_for('admin_topic_threads', topic_id=topic.id) }}{% else %}{{ url_for('admin_threads') }}{% endif %}" class="btn btn-outline-light">
                     <i class="fas fa-arrow-left me-1"></i>Back to Threads
                 </a>
             </div>
@@ -110,16 +118,31 @@
                             <div class="form-text">Optional: Provide context about this thread's purpose and scope</div>
                         </div>
                         
+                        {% if not topic %}
+                        <div class="mb-3">
+                            <label for="topic_ids" class="form-label">Topics</label>
+                            <select class="form-select" id="topic_ids" name="topic_ids" multiple>
+                                {% for topic_option in topics %}
+                                <option value="{{ topic_option.id }}" 
+                                        {% if topic_option.id in (request.form.getlist('topic_ids') or []) %}selected{% endif %}>
+                                    {{ topic_option.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Select one or more topics for this thread (optional - can be added later)</div>
+                        </div>
+                        {% endif %}
+                        
                         <div class="mb-3">
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle me-2"></i>
-                                <strong>Thread Purpose:</strong> Threads help organize events chronologically within a topic. 
+                                <strong>Thread Purpose:</strong> Threads help organize events chronologically and can span multiple topics. 
                                 You can add events to this thread later to create a timeline of related occurrences.
                             </div>
                         </div>
                         
                         <div class="d-flex justify-content-between">
-                            <a href="{{ url_for('admin_threads', topic_id=topic.id) }}" class="btn btn-secondary">
+                            <a href="{% if topic %}{{ url_for('admin_topic_threads', topic_id=topic.id) }}{% else %}{{ url_for('admin_threads') }}{% endif %}" class="btn btn-secondary">
                                 <i class="fas fa-times me-1"></i>Cancel
                             </a>
                             <button type="submit" class="btn btn-primary">

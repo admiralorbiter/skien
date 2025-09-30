@@ -13,7 +13,6 @@ class EventClaim(BaseModel):
     
     # Core fields
     topic_id = db.Column(db.Integer, ForeignKey('topics.id'), nullable=False, index=True)
-    thread_id = db.Column(db.Integer, ForeignKey('threads.id'), nullable=True, index=True)
     story_primary_id = db.Column(db.Integer, ForeignKey('stories.id'), nullable=True, index=True)
     claim_text = db.Column(db.Text, nullable=False)
     event_date = db.Column(db.Date, nullable=False, index=True)
@@ -21,7 +20,6 @@ class EventClaim(BaseModel):
     
     # Relationships
     topic = db.relationship('Topic', backref='topic_events')
-    thread = db.relationship('Thread', backref='thread_events')
     primary_story = db.relationship('Story', foreign_keys=[story_primary_id])
     
     # Edges (relationships to other events)
@@ -36,7 +34,6 @@ class EventClaim(BaseModel):
     # Indexes and constraints
     __table_args__ = (
         Index('idx_event_topic', 'topic_id'),
-        Index('idx_event_thread', 'thread_id'),
         Index('idx_event_date', 'event_date'),
         Index('idx_event_importance', 'importance'),
         CheckConstraint('length(claim_text) > 0', name='ck_event_claim_text_not_empty'),

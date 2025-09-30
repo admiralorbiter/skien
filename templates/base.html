@@ -311,6 +311,25 @@
                         </a>
                     </li>
                     {% if current_user.is_authenticated and current_user.is_admin %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="contentDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-layer-group me-1"></i>Content
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('admin_stories') }}">
+                                <i class="fas fa-newspaper me-2"></i>Stories
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_topics') }}">
+                                <i class="fas fa-tags me-2"></i>Topics
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_threads') }}">
+                                <i class="fas fa-sitemap me-2"></i>Threads
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_events') }}">
+                                <i class="fas fa-calendar-alt me-2"></i>Events
+                            </a></li>
+                        </ul>
+                    </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
                             <i class="fas fa-cog me-1"></i>Admin

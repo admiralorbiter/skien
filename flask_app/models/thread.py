@@ -8,25 +8,23 @@ from .base import db, BaseModel
 
 
 class Thread(BaseModel):
-    """Model for chronological sequences within topics"""
+    """Model for chronological sequences that can span multiple topics"""
     __tablename__ = 'threads'
     
     # Core fields
-    topic_id = db.Column(db.Integer, ForeignKey('topics.id'), nullable=False, index=True)
-    name = db.Column(db.String(200), nullable=False)
+    name = db.Column(db.String(200), nullable=False, unique=True)
     description = db.Column(db.Text, nullable=True)
     start_date = db.Column(db.Date, nullable=True, index=True)
     
     # Relationships
-    topic = db.relationship('Topic')
-    events = db.relationship('EventClaim', backref='thread_obj', lazy='dynamic')
+    topics = db.relationship('Topic', secondary='thread_topics', backref='threads', lazy='dynamic')
+    events = db.relationship('EventClaim', secondary='thread_events', backref='threads', lazy='dynamic')
     
     # Many-to-many relationship with stories
     stories = db.relationship('Story', secondary='thread_stories', backref='threads', lazy='dynamic')
     
     # Indexes and constraints
     __table_args__ = (
-        Index('idx_thread_topic', 'topic_id'),
         Index('idx_thread_start_date', 'start_date'),
         CheckConstraint('length(name) > 0', name='ck_thread_name_not_empty'),
         CheckConstraint('length(name) <= 200', name='ck_thread_name_length'),
@@ -35,8 +33,19 @@ class Thread(BaseModel):
     def add_event(self, event):
         """Add an event to this thread"""
         try:
-            event.thread_id = self.id
-            event.save()
+            if event not in self.events:
+                self.events.append(event)
+                self.save()
+            return True, None
+        except Exception as e:
+            return False, str(e)
+    
+    def add_topic(self, topic):
+        """Add a topic to this thread"""
+        try:
+            if topic not in self.topics:
+                self.topics.append(topic)
+                self.save()
             return True, None
         except Exception as e:
             return False, str(e)
@@ -44,7 +53,12 @@ class Thread(BaseModel):
     @classmethod
     def find_by_topic(cls, topic_id):
         """Find all threads for a given topic"""
-        return cls.query.filter_by(topic_id=topic_id).all()
+        return cls.query.join(cls.topics).filter_by(id=topic_id).all()
+    
+    @classmethod
+    def find_all(cls):
+        """Find all threads"""
+        return cls.query.all()
     
     def __repr__(self):
         return f'<Thread {self.id}: {self.name}>'
@@ -64,9 +78,8 @@ class Thread(BaseModel):
         if self.start_date and self.start_date > date.today():
             errors.append("Start date cannot be in the future")
         
-        # Topic validation
-        if not self.topic_id:
-            errors.append("Thread must belong to a topic")
+        # Topic validation - threads can exist without topics initially
+        # Topics are added via the many-to-many relationship
         
         return errors
     
@@ -157,35 +170,21 @@ class Thread(BaseModel):
         event.thread_id = new_thread.id
         return True, None
     
-    @classmethod
-    def find_by_topic(cls, topic_id):
-        """Find threads by topic"""
-        try:
-            return cls.query.filter_by(topic_id=topic_id).order_by(cls.start_date.asc()).all()
-        except SQLAlchemyError as e:
-            current_app.logger.error(f"Database error finding threads by topic {topic_id}: {str(e)}")
-            return []
     
     @classmethod
-    def find_by_name(cls, name, topic_id=None):
-        """Find thread by name, optionally within a topic"""
+    def find_by_name(cls, name):
+        """Find thread by name"""
         try:
-            query = cls.query.filter_by(name=name)
-            if topic_id:
-                query = query.filter_by(topic_id=topic_id)
-            return query.first()
+            return cls.query.filter_by(name=name).first()
         except SQLAlchemyError as e:
             current_app.logger.error(f"Database error finding thread by name {name}: {str(e)}")
             return None
     
     @classmethod
-    def search_by_name(cls, search_term, topic_id=None):
+    def search_by_name(cls, search_term):
         """Search threads by name (case-insensitive partial match)"""
         try:
-            query = cls.query.filter(cls.name.ilike(f'%{search_term}%'))
-            if topic_id:
-                query = query.filter_by(topic_id=topic_id)
-            return query.order_by(cls.start_date.asc()).all()
+            return cls.query.filter(cls.name.ilike(f'%{search_term}%')).order_by(cls.start_date.asc()).all()
         except SQLAlchemyError as e:
             current_app.logger.error(f"Database error searching threads by name {search_term}: {str(e)}")
             return []

@@ -17,7 +17,6 @@ class Topic(BaseModel):
     color = db.Column(db.String(7), nullable=True)  # Hex color code
     
     # Relationships
-    threads = db.relationship('Thread', backref='topic_obj', lazy='dynamic', cascade='all, delete-orphan')
     events = db.relationship('EventClaim', backref='topic_obj', lazy='dynamic')
     
     # Indexes and constraints
