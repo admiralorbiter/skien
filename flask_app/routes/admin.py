@@ -399,9 +399,444 @@ def register_admin_routes(app):
     @login_required
     @admin_required
     def admin_events():
-        """Admin events management page - placeholder"""
-        flash('Events management coming soon!', 'info')
+        """Admin events management page"""
+        try:
+            from flask_app.models import EventClaim, Topic, Thread
+            
+            # Get search and filter parameters
+            search = request.args.get('search', '').strip()
+            sort_by = request.args.get('sort', 'event_date')
+            topic_filter = request.args.get('topic', '')
+            thread_filter = request.args.get('thread', '')
+            importance_filter = request.args.get('importance', '')
+            
+            # Build query
+            query = EventClaim.query
+            
+            # Apply filters
+            if search:
+                query = query.filter(EventClaim.claim_text.ilike(f'%{search}%'))
+            
+            if topic_filter:
+                query = query.filter(EventClaim.topic_id == topic_filter)
+            
+            if thread_filter:
+                query = query.join(EventClaim.threads).filter_by(id=thread_filter)
+            
+            if importance_filter:
+                query = query.filter(EventClaim.importance == importance_filter)
+            
+            # Apply sorting
+            if sort_by == 'event_date':
+                query = query.order_by(EventClaim.event_date.desc())
+            elif sort_by == 'importance':
+                query = query.order_by(EventClaim.importance.desc(), EventClaim.event_date.desc())
+            elif sort_by == 'created_at':
+                query = query.order_by(EventClaim.created_at.desc())
+            elif sort_by == 'claim_text':
+                query = query.order_by(EventClaim.claim_text.asc())
+            
+            # Get events with statistics
+            events = query.all()
+            events_with_stats = []
+            
+            for event in events:
+                event_data = event.to_dict(include_counts=True, include_dates=True)
+                # Add thread names
+                event_data['threads'] = [thread.name for thread in event.threads]
+                events_with_stats.append(event_data)
+            
+            # Get filter options
+            topics = Topic.query.order_by(Topic.name.asc()).all()
+            threads = Thread.query.order_by(Thread.name.asc()).all()
+            
+            # Log admin action
+            AdminLog.log_action(
+                admin_user_id=current_user.id,
+                action='VIEW_EVENTS',
+                details=f'Viewed events list (search: {search}, filters: topic={topic_filter}, thread={thread_filter}, importance={importance_filter})',
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent')
+            )
+            
+            return render_template('admin/events.html',
+                                 events=events_with_stats,
+                                 topics=topics,
+                                 threads=threads,
+                                 search=search,
+                                 sort_by=sort_by,
+                                 topic_filter=topic_filter,
+                                 thread_filter=thread_filter,
+                                 importance_filter=importance_filter)
+            
+        except Exception as e:
+            current_app.logger.error(f"Error loading events: {str(e)}")
+            flash('An error occurred while loading events.', 'danger')
         return redirect(url_for('admin_dashboard'))
+    
+    @app.route('/admin/events/<int:event_id>')
+    @login_required
+    @admin_required
+    def admin_view_event(event_id):
+        """View event details"""
+        try:
+            from flask_app.models import EventClaim, Thread, Story
+            
+            event = EventClaim.query.get_or_404(event_id)
+            
+            # Get threads for this event
+            threads = list(event.threads)
+            
+            # Get stories for this event
+            stories = event.get_all_stories()
+            
+            # Add count attributes to event for template
+            event.thread_count = event.get_thread_count()
+            event.story_count = len(stories)
+            
+            # Log admin action
+            AdminLog.log_action(
+                admin_user_id=current_user.id,
+                action='VIEW_EVENT',
+                target_event_id=event.id,
+                details=f'Viewed event: {event.claim_text[:50]}...',
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent')
+            )
+            
+            return render_template('admin/view_event.html',
+                                 event=event,
+                                 threads=threads,
+                                 stories=stories)
+            
+        except Exception as e:
+            current_app.logger.error(f"Error viewing event {event_id}: {str(e)}")
+            flash('An error occurred while loading the event.', 'danger')
+            return redirect(url_for('admin_events'))
+    
+    @app.route('/admin/events/create', methods=['GET', 'POST'])
+    @login_required
+    @admin_required
+    def admin_create_event():
+        """Create new event"""
+        try:
+            from flask_app.models import EventClaim, Topic, Thread, Story
+            
+            if request.method == 'POST':
+                # Get form data
+                claim_text = request.form.get('claim_text', '').strip()
+                event_date_str = request.form.get('event_date', '').strip()
+                importance_str = request.form.get('importance', '').strip()
+                topic_id_str = request.form.get('topic_id', '').strip()
+                
+                # Validate required fields
+                if not claim_text:
+                    flash('Event description is required.', 'danger')
+                    return render_template('admin/create_event.html',
+                                         topics=Topic.query.all(),
+                                         threads=Thread.query.all(),
+                                         stories=Story.query.all())
+                
+                if not event_date_str:
+                    flash('Event date is required.', 'danger')
+                    return render_template('admin/create_event.html',
+                                         topics=Topic.query.all(),
+                                         threads=Thread.query.all(),
+                                         stories=Story.query.all())
+                
+                if not topic_id_str:
+                    flash('Topic is required.', 'danger')
+                    return render_template('admin/create_event.html',
+                                         topics=Topic.query.all(),
+                                         threads=Thread.query.all(),
+                                         stories=Story.query.all())
+                
+                # Parse and validate data
+                try:
+                    event_date = datetime.strptime(event_date_str, '%Y-%m-%d').date()
+                except ValueError:
+                    flash('Invalid date format. Use YYYY-MM-DD.', 'danger')
+                    return render_template('admin/create_event.html',
+                                         topics=Topic.query.all(),
+                                         threads=Thread.query.all(),
+                                         stories=Story.query.all())
+                
+                importance = int(importance_str) if importance_str else None
+                topic_id = int(topic_id_str)
+                
+                # Create event
+                event = EventClaim(
+                    claim_text=claim_text,
+                    event_date=event_date,
+                    importance=importance,
+                    topic_id=topic_id
+                )
+                
+                # Handle thread assignments
+                thread_ids = request.form.getlist('thread_ids')
+                if thread_ids:
+                    thread_ids = [int(tid) for tid in thread_ids if tid.isdigit()]
+                    for thread_id in thread_ids:
+                        thread = Thread.query.get(thread_id)
+                        if thread:
+                            event.add_thread(thread)
+                
+                # Handle story assignments
+                story_ids = request.form.getlist('story_ids')
+                if story_ids:
+                    story_ids = [int(sid) for sid in story_ids if sid.isdigit()]
+                    for story_id in story_ids:
+                        story = Story.query.get(story_id)
+                        if story:
+                            event.add_story(story)
+                
+                # Validate event
+                validation_errors = event.validate()
+                if validation_errors:
+                    for error in validation_errors:
+                        flash(error, 'danger')
+                    return render_template('admin/create_event.html',
+                                         topics=Topic.query.all(),
+                                         threads=Thread.query.all(),
+                                         stories=Story.query.all())
+                
+                try:
+                    db.session.add(event)
+                    db.session.commit()
+                    
+                    # Log admin action
+                    AdminLog.log_action(
+                        admin_user_id=current_user.id,
+                        action='CREATE_EVENT',
+                        target_event_id=event.id,
+                        details=f'Created event: {event.claim_text[:50]}...',
+                        ip_address=request.remote_addr,
+                        user_agent=request.headers.get('User-Agent')
+                    )
+                    
+                    flash('Event created successfully!', 'success')
+                    return redirect(url_for('admin_view_event', event_id=event.id))
+                    
+                except Exception as e:
+                    db.session.rollback()
+                    current_app.logger.error(f"Error creating event: {str(e)}")
+                    flash('An error occurred while creating the event.', 'danger')
+            
+            return render_template('admin/create_event.html',
+                                 topics=Topic.query.all(),
+                                 threads=Thread.query.all(),
+                                 stories=Story.query.all())
+            
+        except Exception as e:
+            current_app.logger.error(f"Error in create event: {str(e)}")
+            flash('An error occurred while loading the create event page.', 'danger')
+            return redirect(url_for('admin_events'))
+    
+    @app.route('/admin/events/<int:event_id>/edit', methods=['GET', 'POST'])
+    @login_required
+    @admin_required
+    def admin_edit_event(event_id):
+        """Edit event"""
+        try:
+            from flask_app.models import EventClaim, Topic, Thread, Story
+            
+            event = EventClaim.query.get_or_404(event_id)
+            
+            if request.method == 'POST':
+                # Get form data
+                claim_text = request.form.get('claim_text', '').strip()
+                event_date_str = request.form.get('event_date', '').strip()
+                importance_str = request.form.get('importance', '').strip()
+                topic_id_str = request.form.get('topic_id', '').strip()
+                
+                # Validate required fields
+                if not claim_text:
+                    flash('Event description is required.', 'danger')
+                    # Get data for template
+                    current_threads = list(event.threads)
+                    current_stories = event.get_all_stories()
+                    return render_template('admin/edit_event.html',
+                                         event=event,
+                                         topics=Topic.query.all(),
+                                         threads=Thread.query.all(),
+                                         stories=Story.query.all(),
+                                         current_threads=current_threads,
+                                         current_stories=current_stories)
+                
+                if not event_date_str:
+                    flash('Event date is required.', 'danger')
+                    # Get data for template
+                    current_threads = list(event.threads)
+                    current_stories = event.get_all_stories()
+                    return render_template('admin/edit_event.html',
+                                         event=event,
+                                         topics=Topic.query.all(),
+                                         threads=Thread.query.all(),
+                                         stories=Story.query.all(),
+                                         current_threads=current_threads,
+                                         current_stories=current_stories)
+                
+                if not topic_id_str:
+                    flash('Topic is required.', 'danger')
+                    # Get data for template
+                    current_threads = list(event.threads)
+                    current_stories = event.get_all_stories()
+                    return render_template('admin/edit_event.html',
+                                         event=event,
+                                         topics=Topic.query.all(),
+                                         threads=Thread.query.all(),
+                                         stories=Story.query.all(),
+                                         current_threads=current_threads,
+                                         current_stories=current_stories)
+                
+                # Parse and validate data
+                try:
+                    event_date = datetime.strptime(event_date_str, '%Y-%m-%d').date()
+                except ValueError:
+                    flash('Invalid date format. Use YYYY-MM-DD.', 'danger')
+                    # Get data for template
+                    current_threads = list(event.threads)
+                    current_stories = event.get_all_stories()
+                    return render_template('admin/edit_event.html',
+                                         event=event,
+                                         topics=Topic.query.all(),
+                                         threads=Thread.query.all(),
+                                         stories=Story.query.all(),
+                                         current_threads=current_threads,
+                                         current_stories=current_stories)
+                
+                importance = int(importance_str) if importance_str else None
+                topic_id = int(topic_id_str)
+                
+                # Update event
+                event.claim_text = claim_text
+                event.event_date = event_date
+                event.importance = importance
+                event.topic_id = topic_id
+                
+                # Handle thread assignments
+                thread_ids = request.form.getlist('thread_ids')
+                if thread_ids:
+                    thread_ids = [int(tid) for tid in thread_ids if tid.isdigit()]
+                    # Clear existing thread associations
+                    event.threads = []
+                    # Add new thread associations
+                    for thread_id in thread_ids:
+                        thread = Thread.query.get(thread_id)
+                        if thread:
+                            event.add_thread(thread)
+                else:
+                    # No threads selected, clear all thread assignments
+                    event.threads = []
+                
+                # Handle story assignments
+                story_ids = request.form.getlist('story_ids')
+                if story_ids:
+                    story_ids = [int(sid) for sid in story_ids if sid.isdigit()]
+                    # Clear existing story associations
+                    for link in event.event_story_links:
+                        db.session.delete(link)
+                    # Add new story associations
+                    for story_id in story_ids:
+                        story = Story.query.get(story_id)
+                        if story:
+                            event.add_story(story)
+                else:
+                    # No stories selected, clear all story assignments
+                    for link in event.event_story_links:
+                        db.session.delete(link)
+                
+                # Validate event
+                validation_errors = event.validate()
+                if validation_errors:
+                    for error in validation_errors:
+                        flash(error, 'danger')
+                    # Get data for template
+                    current_threads = list(event.threads)
+                    current_stories = event.get_all_stories()
+                    return render_template('admin/edit_event.html',
+                                         event=event,
+                                         topics=Topic.query.all(),
+                                         threads=Thread.query.all(),
+                                         stories=Story.query.all(),
+                                         current_threads=current_threads,
+                                         current_stories=current_stories)
+                
+                try:
+                    db.session.commit()
+                    
+                    # Log admin action
+                    AdminLog.log_action(
+                        admin_user_id=current_user.id,
+                        action='UPDATE_EVENT',
+                        target_event_id=event.id,
+                        details=f'Updated event: {event.claim_text[:50]}...',
+                        ip_address=request.remote_addr,
+                        user_agent=request.headers.get('User-Agent')
+                    )
+                    
+                    flash('Event updated successfully!', 'success')
+                    return redirect(url_for('admin_view_event', event_id=event.id))
+                    
+                except Exception as e:
+                    db.session.rollback()
+                    current_app.logger.error(f"Error updating event: {str(e)}")
+                    flash('An error occurred while updating the event.', 'danger')
+            
+            # Get current threads and stories for display
+            current_threads = list(event.threads)
+            current_stories = event.get_all_stories()
+            
+            return render_template('admin/edit_event.html',
+                                 event=event,
+                                 topics=Topic.query.all(),
+                                 threads=Thread.query.all(),
+                                 stories=Story.query.all(),
+                                 current_threads=current_threads,
+                                 current_stories=current_stories)
+            
+        except Exception as e:
+            current_app.logger.error(f"Error editing event {event_id}: {str(e)}")
+            flash('An error occurred while loading the event for editing.', 'danger')
+            return redirect(url_for('admin_events'))
+    
+    @app.route('/admin/events/<int:event_id>/delete', methods=['POST'])
+    @login_required
+    @admin_required
+    def admin_delete_event(event_id):
+        """Delete event"""
+        try:
+            from flask_app.models import EventClaim
+            
+            event = EventClaim.query.get_or_404(event_id)
+            
+            try:
+                # Log admin action before deletion
+                AdminLog.log_action(
+                    admin_user_id=current_user.id,
+                    action='DELETE_EVENT',
+                    target_event_id=event.id,
+                    details=f'Deleted event: {event.claim_text[:50]}...',
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent')
+                )
+                
+                db.session.delete(event)
+                db.session.commit()
+                
+                flash('Event deleted successfully!', 'success')
+                return redirect(url_for('admin_events'))
+                
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Error deleting event: {str(e)}")
+                flash('An error occurred while deleting the event.', 'danger')
+                return redirect(url_for('admin_view_event', event_id=event_id))
+            
+        except Exception as e:
+            current_app.logger.error(f"Error in delete event: {str(e)}")
+            flash('An error occurred while deleting the event.', 'danger')
+            return redirect(url_for('admin_events'))
     
     @app.route('/admin/topics')
     @login_required

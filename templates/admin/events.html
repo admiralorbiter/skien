@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}Events - Admin - SKIEN{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header Section -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-1">Events Management</h1>
+                    <p class="text-muted mb-0">Manage and organize events chronologically</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('admin_create_event') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Create Event
+                    </a>
+                </div>
+            </div>
+
+            <!-- Search and Filter Section -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="search" class="form-label">Search Events</label>
+                            <input type="text" class="form-control" id="search" name="search" 
+                                   value="{{ search }}" placeholder="Search event descriptions...">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="topic" class="form-label">Topic</label>
+                            <select class="form-select" id="topic" name="topic">
+                                <option value="">All Topics</option>
+                                {% for topic in topics %}
+                                <option value="{{ topic.id }}" {% if topic_filter == topic.id|string %}selected{% endif %}>
+                                    {{ topic.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="thread" class="form-label">Thread</label>
+                            <select class="form-select" id="thread" name="thread">
+                                <option value="">All Threads</option>
+                                {% for thread in threads %}
+                                <option value="{{ thread.id }}" {% if thread_filter == thread.id|string %}selected{% endif %}>
+                                    {{ thread.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="importance" class="form-label">Importance</label>
+                            <select class="form-select" id="importance" name="importance">
+                                <option value="">All Levels</option>
+                                <option value="1" {% if importance_filter == '1' %}selected{% endif %}>1 - Low</option>
+                                <option value="2" {% if importance_filter == '2' %}selected{% endif %}>2 - Medium-Low</option>
+                                <option value="3" {% if importance_filter == '3' %}selected{% endif %}>3 - Medium</option>
+                                <option value="4" {% if importance_filter == '4' %}selected{% endif %}>4 - Medium-High</option>
+                                <option value="5" {% if importance_filter == '5' %}selected{% endif %}>5 - High</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="sort" class="form-label">Sort By</label>
+                            <select class="form-select" id="sort" name="sort">
+                                <option value="event_date" {% if sort_by == 'event_date' %}selected{% endif %}>Date</option>
+                                <option value="importance" {% if sort_by == 'importance' %}selected{% endif %}>Importance</option>
+                                <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>Created</option>
+                                <option value="claim_text" {% if sort_by == 'claim_text' %}selected{% endif %}>Description</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-outline-primary me-2">
+                                <i class="fas fa-search me-1"></i>Search
+                            </button>
+                            <a href="{{ url_for('admin_events') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>Clear
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Events List -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-calendar-alt me-2"></i>Events
+                        <span class="badge bg-primary ms-2">{{ events|length }}</span>
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if events %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Event</th>
+                                        <th>Date</th>
+                                        <th>Importance</th>
+                                        <th>Topic</th>
+                                        <th>Threads</th>
+                                        <th>Stories</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for event in events %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-start">
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-1">{{ event.claim_text[:100] }}{% if event.claim_text|length > 100 %}...{% endif %}</h6>
+                                                    <small class="text-muted">
+                                                        Created {{ event.created_at[:10] if event.created_at else 'Unknown' }}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">{{ event.event_date_formatted or 'No date' }}</span>
+                                        </td>
+                                        <td>
+                                            {% if event.importance %}
+                                                <span class="badge bg-{% if event.importance >= 4 %}danger{% elif event.importance >= 3 %}warning{% else %}success{% endif %}">
+                                                    {{ event.importance }}/5
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">Not set</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% for topic in topics %}
+                                                {% if topic.id == event.topic_id %}
+                                                    <span class="badge" style="background-color: {{ topic.color }}; color: white;">
+                                                        {{ topic.name }}
+                                                    </span>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            {% if event.threads %}
+                                                {% for thread_name in event.threads[:3] %}
+                                                    <span class="badge bg-secondary me-1">{{ thread_name }}</span>
+                                                {% endfor %}
+                                                {% if event.threads|length > 3 %}
+                                                    <span class="text-muted">+{{ event.threads|length - 3 }} more</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">No threads</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">{{ event.story_count or 0 }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a href="{{ url_for('admin_view_event', event_id=event.id) }}" 
+                                                   class="btn btn-outline-primary" title="View Event">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a href="{{ url_for('admin_edit_event', event_id=event.id) }}" 
+                                                   class="btn btn-outline-warning" title="Edit Event">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <button type="button" class="btn btn-outline-danger" 
+                                                        onclick="confirmDelete('{{ event.id }}', '{{ event.claim_text[:50]|replace("'", "\\'") }}...')" 
+                                                        title="Delete Event">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No Events Found</h5>
+                            <p class="mb-3">No events match your current search criteria.</p>
+                            <a href="{{ url_for('admin_create_event') }}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Create Your First Event
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this event?</p>
+                <p class="text-muted"><strong>Event:</strong> <span id="deleteEventName"></span></p>
+                <p class="text-danger"><strong>This action cannot be undone.</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Delete Event</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(eventId, eventName) {
+    document.getElementById('deleteEventName').textContent = eventName;
+    document.getElementById('deleteForm').action = '{{ url_for("admin_delete_event", event_id=0) }}'.replace('0', eventId);
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}

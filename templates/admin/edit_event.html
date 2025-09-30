@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Event - Admin - SKIEN{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header Section -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-1">Edit Event</h1>
+                    <p class="text-muted mb-0">{{ event.claim_text[:100] }}{% if event.claim_text|length > 100 %}...{% endif %}</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('admin_view_event', event_id=event.id) }}" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-eye me-2"></i>View Event
+                    </a>
+                    <a href="{{ url_for('admin_events') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Events
+                    </a>
+                </div>
+            </div>
+
+            <!-- Edit Event Form -->
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-edit me-2"></i>Event Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST">
+                                <div class="row">
+                                    <div class="col-md-12 mb-3">
+                                        <label for="claim_text" class="form-label">
+                                            Event Description <span class="text-danger">*</span>
+                                        </label>
+                                        <textarea class="form-control" id="claim_text" name="claim_text" 
+                                                  rows="4" required placeholder="Describe the event or claim...">{{ request.form.claim_text or event.claim_text }}</textarea>
+                                        <div class="form-text">Provide a clear description of the event or claim.</div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="event_date" class="form-label">
+                                            Event Date <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="date" class="form-control" id="event_date" name="event_date" 
+                                               value="{{ request.form.event_date or event.event_date.strftime('%Y-%m-%d') if event.event_date else '' }}" required>
+                                        <div class="form-text">The date when this event occurred.</div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="importance" class="form-label">Importance Level</label>
+                                        <select class="form-select" id="importance" name="importance">
+                                            <option value="">Select importance level</option>
+                                            <option value="1" {% if (request.form.importance == '1') or (event.importance == 1 and not request.form.importance) %}selected{% endif %}>1 - Low</option>
+                                            <option value="2" {% if (request.form.importance == '2') or (event.importance == 2 and not request.form.importance) %}selected{% endif %}>2 - Medium-Low</option>
+                                            <option value="3" {% if (request.form.importance == '3') or (event.importance == 3 and not request.form.importance) %}selected{% endif %}>3 - Medium</option>
+                                            <option value="4" {% if (request.form.importance == '4') or (event.importance == 4 and not request.form.importance) %}selected{% endif %}>4 - Medium-High</option>
+                                            <option value="5" {% if (request.form.importance == '5') or (event.importance == 5 and not request.form.importance) %}selected{% endif %}>5 - High</option>
+                                        </select>
+                                        <div class="form-text">Rate the importance of this event (1-5).</div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-12 mb-3">
+                                        <label for="topic_id" class="form-label">
+                                            Topic <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="topic_id" name="topic_id" required>
+                                            <option value="">Select a topic</option>
+                                            {% for topic in topics %}
+                                            <option value="{{ topic.id }}" 
+                                                    {% if (request.form.topic_id == topic.id|string) or (event.topic_id == topic.id and not request.form.topic_id) %}selected{% endif %}
+                                                    style="background-color: {{ topic.color }}; color: white;">
+                                                {{ topic.name }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="form-text">Choose the topic this event belongs to.</div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-12 mb-3">
+                                        <label for="thread_ids" class="form-label">Associate with Threads</label>
+                                        <select class="form-select" id="thread_ids" name="thread_ids" multiple size="5">
+                                            {% for thread in threads %}
+                                            <option value="{{ thread.id }}" 
+                                                    {% if thread in current_threads %}selected{% endif %}>
+                                                {{ thread.name }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="form-text">Select one or more threads to associate this event with (optional). Hold Ctrl/Cmd to select multiple.</div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-12 mb-3">
+                                        <label for="story_ids" class="form-label">Associate with Stories</label>
+                                        <select class="form-select" id="story_ids" name="story_ids" multiple size="5">
+                                            {% for story in stories %}
+                                            <option value="{{ story.id }}" 
+                                                    {% if story in current_stories %}selected{% endif %}>
+                                                {{ story.title }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="form-text">Select one or more stories to associate this event with (optional). Hold Ctrl/Cmd to select multiple.</div>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between">
+                                    <a href="{{ url_for('admin_view_event', event_id=event.id) }}" class="btn btn-secondary">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Update Event
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <!-- Current Associations -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-link me-2"></i>Current Associations
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="text-muted mb-2">Threads ({{ current_threads|length }})</h6>
+                            {% if current_threads %}
+                                {% for thread in current_threads %}
+                                    <span class="badge bg-secondary me-1 mb-1">{{ thread.name }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-muted small mb-0">No threads assigned</p>
+                            {% endif %}
+                            
+                            <hr>
+                            
+                            <h6 class="text-muted mb-2">Stories ({{ current_stories|length }})</h6>
+                            {% if current_stories %}
+                                {% for story in current_stories %}
+                                    <span class="badge bg-info me-1 mb-1">{{ story.title[:30] }}{% if story.title|length > 30 %}...{% endif %}</span>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-muted small mb-0">No stories assigned</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Event Statistics -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-bar me-2"></i>Statistics
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6 mb-3">
+                                    <div class="border rounded p-3">
+                                        <h4 class="text-primary mb-1">{{ current_threads|length }}</h4>
+                                        <small class="text-muted">Threads</small>
+                                    </div>
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <div class="border rounded p-3">
+                                        <h4 class="text-info mb-1">{{ current_stories|length }}</h4>
+                                        <small class="text-muted">Stories</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Event Metadata -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-info-circle me-2"></i>Metadata
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row mb-0">
+                                <dt class="col-sm-4">Created:</dt>
+                                <dd class="col-sm-8">
+                                    {{ event.created_at.strftime('%B %d, %Y at %I:%M %p') if event.created_at else 'Unknown' }}
+                                </dd>
+                                
+                                <dt class="col-sm-4">Updated:</dt>
+                                <dd class="col-sm-8">
+                                    {{ event.updated_at.strftime('%B %d, %Y at %I:%M %p') if event.updated_at else 'Unknown' }}
+                                </dd>
+                                
+                                <dt class="col-sm-4">Event ID:</dt>
+                                <dd class="col-sm-8">
+                                    <code>{{ event.id }}</code>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

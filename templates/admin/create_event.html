@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Create Event - Admin - SKIEN{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header Section -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-1">Create New Event</h1>
+                    <p class="text-muted mb-0">Add a new event to the system</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('admin_events') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Events
+                    </a>
+                </div>
+            </div>
+
+            <!-- Create Event Form -->
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-plus me-2"></i>Event Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST">
+                                <div class="row">
+                                    <div class="col-md-12 mb-3">
+                                        <label for="claim_text" class="form-label">
+                                            Event Description <span class="text-danger">*</span>
+                                        </label>
+                                        <textarea class="form-control" id="claim_text" name="claim_text" 
+                                                  rows="4" required placeholder="Describe the event or claim...">{{ request.form.claim_text or '' }}</textarea>
+                                        <div class="form-text">Provide a clear description of the event or claim.</div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="event_date" class="form-label">
+                                            Event Date <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="date" class="form-control" id="event_date" name="event_date" 
+                                               value="{{ request.form.event_date or '' }}" required>
+                                        <div class="form-text">The date when this event occurred.</div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="importance" class="form-label">Importance Level</label>
+                                        <select class="form-select" id="importance" name="importance">
+                                            <option value="">Select importance level</option>
+                                            <option value="1" {% if request.form.importance == '1' %}selected{% endif %}>1 - Low</option>
+                                            <option value="2" {% if request.form.importance == '2' %}selected{% endif %}>2 - Medium-Low</option>
+                                            <option value="3" {% if request.form.importance == '3' %}selected{% endif %}>3 - Medium</option>
+                                            <option value="4" {% if request.form.importance == '4' %}selected{% endif %}>4 - Medium-High</option>
+                                            <option value="5" {% if request.form.importance == '5' %}selected{% endif %}>5 - High</option>
+                                        </select>
+                                        <div class="form-text">Rate the importance of this event (1-5).</div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-12 mb-3">
+                                        <label for="topic_id" class="form-label">
+                                            Topic <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="topic_id" name="topic_id" required>
+                                            <option value="">Select a topic</option>
+                                            {% for topic in topics %}
+                                            <option value="{{ topic.id }}" 
+                                                    {% if request.form.topic_id == topic.id|string %}selected{% endif %}
+                                                    style="background-color: {{ topic.color }}; color: white;">
+                                                {{ topic.name }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="form-text">Choose the topic this event belongs to.</div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-12 mb-3">
+                                        <label for="thread_ids" class="form-label">Associate with Threads</label>
+                                        <select class="form-select" id="thread_ids" name="thread_ids" multiple size="5">
+                                            {% for thread in threads %}
+                                            <option value="{{ thread.id }}" 
+                                                    {% if request.form.getlist('thread_ids') and thread.id|string in request.form.getlist('thread_ids') %}selected{% endif %}>
+                                                {{ thread.name }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="form-text">Select one or more threads to associate this event with (optional). Hold Ctrl/Cmd to select multiple.</div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-12 mb-3">
+                                        <label for="story_ids" class="form-label">Associate with Stories</label>
+                                        <select class="form-select" id="story_ids" name="story_ids" multiple size="5">
+                                            {% for story in stories %}
+                                            <option value="{{ story.id }}" 
+                                                    {% if request.form.getlist('story_ids') and story.id|string in request.form.getlist('story_ids') %}selected{% endif %}>
+                                                {{ story.title }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="form-text">Select one or more stories to associate this event with (optional). Hold Ctrl/Cmd to select multiple.</div>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between">
+                                    <a href="{{ url_for('admin_events') }}" class="btn btn-secondary">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Create Event
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <!-- Help Card -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-question-circle me-2"></i>Help
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>Event Description</h6>
+                            <p class="small text-muted mb-3">Provide a clear, concise description of what happened. This will be the main identifier for the event.</p>
+                            
+                            <h6>Event Date</h6>
+                            <p class="small text-muted mb-3">The actual date when the event occurred. This is used for chronological organization.</p>
+                            
+                            <h6>Importance Level</h6>
+                            <p class="small text-muted mb-3">Rate how important this event is on a scale of 1-5. This helps prioritize events in timelines.</p>
+                            
+                            <h6>Topic Assignment</h6>
+                            <p class="small text-muted mb-3">Every event must belong to a topic. Choose the most relevant topic for this event.</p>
+                            
+                            <h6>Thread Association</h6>
+                            <p class="small text-muted mb-3">Threads help organize related events chronologically. You can associate events with multiple threads.</p>
+                            
+                            <h6>Story Association</h6>
+                            <p class="small text-muted mb-0">Link this event to relevant stories for better context and organization.</p>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-bar me-2"></i>Quick Stats
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6 mb-3">
+                                    <div class="border rounded p-3">
+                                        <h4 class="text-primary mb-1">{{ topics|length }}</h4>
+                                        <small class="text-muted">Topics</small>
+                                    </div>
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <div class="border rounded p-3">
+                                        <h4 class="text-info mb-1">{{ threads|length }}</h4>
+                                        <small class="text-muted">Threads</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="border rounded p-3">
+                                        <h4 class="text-success mb-1">{{ stories|length }}</h4>
+                                        <small class="text-muted">Stories</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="border rounded p-3">
+                                        <h4 class="text-warning mb-1">0</h4>
+                                        <small class="text-muted">Events</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

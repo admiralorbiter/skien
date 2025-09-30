@@ -31,6 +31,8 @@ class EventClaim(BaseModel):
     # Event-story links
     event_story_links = db.relationship('EventStoryLink', backref='event_obj', lazy='dynamic', cascade='all, delete-orphan')
     
+    # Many-to-many relationship with threads (backref defined in Thread model)
+    
     # Indexes and constraints
     __table_args__ = (
         Index('idx_event_topic', 'topic_id'),
@@ -131,6 +133,41 @@ class EventClaim(BaseModel):
         
         return related
     
+    def add_thread(self, thread):
+        """Add this event to a thread"""
+        if thread not in self.threads:
+            self.threads.append(thread)
+    
+    def remove_thread(self, thread):
+        """Remove this event from a thread"""
+        if thread in self.threads:
+            self.threads.remove(thread)
+    
+    def get_thread_count(self):
+        """Get the number of threads this event belongs to"""
+        return len(self.threads)
+    
+    def to_dict(self, include_counts=True, include_dates=True):
+        """Convert event to dictionary for templates"""
+        data = {
+            'id': self.id,
+            'claim_text': self.claim_text,
+            'event_date': self.event_date.isoformat() if self.event_date else None,
+            'importance': self.importance,
+            'topic_id': self.topic_id,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+        
+        if include_counts:
+            data['thread_count'] = self.get_thread_count()
+            data['story_count'] = len(self.get_all_stories())
+        
+        if include_dates:
+            data['event_date_formatted'] = self.event_date.strftime('%B %d, %Y') if self.event_date else None
+        
+        return data
+    
     def can_connect_to(self, other_event):
         """Check if this event can be connected to another event"""
         if not other_event:
@@ -157,7 +194,7 @@ class EventClaim(BaseModel):
     def find_by_thread(cls, thread_id):
         """Find events by thread"""
         try:
-            return cls.query.filter_by(thread_id=thread_id).all()
+            return cls.query.join(cls.threads).filter_by(id=thread_id).all()
         except SQLAlchemyError as e:
             current_app.logger.error(f"Database error finding events by thread {thread_id}: {str(e)}")
             return []
@@ -187,7 +224,11 @@ class EventClaim(BaseModel):
     def find_unsorted(cls):
         """Find events that don't belong to any thread"""
         try:
-            return cls.query.filter(cls.thread_id.is_(None)).all()
+            # Find events that have no thread associations
+            from .thread_event import thread_events_table
+            return cls.query.filter(~cls.id.in_(
+                db.session.query(thread_events_table.c.event_id)
+            )).all()
         except SQLAlchemyError as e:
             current_app.logger.error(f"Database error finding unsorted events: {str(e)}")
             return []
